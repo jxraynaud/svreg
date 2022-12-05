@@ -7,7 +7,6 @@ from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
 from icecream import ic
 
-
 # path_dataset = "data/base_test_sv_reg_working.csv"
 # data_sv = pd.read_csv(path_dataset,
 #                       index_col="date",
@@ -55,13 +54,18 @@ class SvRegression():
         print(f"{n_cols - 1} features (regressors) present.")
 
         # Initializing features and target.
-        self.x_features = self.data_sv.drop(labels=target, axis=1)
-        self.y_target = self.data_sv[target].ravel()
+        self.x_features = np.array(self.data_sv.drop(labels=target, axis=1))
+        self.y_target = np.array(self.data_sv[target].ravel())
 
         # Scalers for features and target:
         self._scaler_x = StandardScaler()
         self._scaler_y = StandardScaler()
 
+        # initializing C (sample correlations, size (n, n)) and r (sample-target correlations, size (n,)).
+        self.c_jk = np.matmul(self.x_features.T, self.x_features)
+        assert self.c_jk.shape == (self.x_features.shape[1], self.x_features.shape[1])
+        self.r_j = np.matmul(self.x_features.T, self.y_target)
+        assert self.r_j.shape == (self.x_features.shape[1],)
 
     def normalize(self):
         x_features_norm = self._scaler_x.fit_transform(self.x_features)
@@ -73,6 +77,13 @@ class SvRegression():
         y_features = self._scaler_y.inverse_transform(y_features_norm)
         return x_features, y_features
 
+    def get_b(self):
+        c_inv = np.linalg.inv(self.c_jk)
+        return np.matmul(c_inv, self.r_j)
+
+    def get_r_squared(self):
+        b_coeffs = self.get_b()
+        return np.inner(b_coeffs, self.r_j)
 
 # Testing:
 dataset = "data/base_test_sv_reg_working.csv"
@@ -86,3 +97,11 @@ print(y_target.shape)
 
 print("shape: y_target normalized:")
 print(y_target_norm.shape)
+
+b_coeffs = sv_reg.get_b()
+print("shape: b_coeffs:")
+print(b_coeffs.shape)
+
+r_squared_dum = sv_reg.get_r_squared()
+print("r_squared_dum:")
+print(r_squared_dum)

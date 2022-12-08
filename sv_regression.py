@@ -195,9 +195,9 @@ x_features_norm_dum_test = x_features_norm[:, dum_predictors]
 
 r_squared_full = lin_reg.fit(x_features_norm_dum_test, y_target_norm).score(x_features_norm_dum_test, y_target_norm)
 
-for ind_feat in dum_predictors:
+sum_shap = 0.0
 
-    sum_shap = 0.0
+for ind_feat in dum_predictors:
 
     shap = compute_shapley(target_pred=ind_feat, predictors=dum_predictors)
     sum_shap = sum_shap + shap

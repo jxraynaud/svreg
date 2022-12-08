@@ -46,8 +46,10 @@ class SvRegression():
         self.y_target = np.array(self.data_sv[target].ravel())
         # compute the number of features, to be corrected if ind_predictors_selected is not None.
         self.num_feat_selec = self.x_features.shape[1]
+        self.ind_predictors_selected = list(range(self.x_features.shape[1]))
 
         if ind_predictors_selected is not None:
+            self.ind_predictors_selected = ind_predictors_selected
             # Selecting only selected predictors.
             self.x_features = self.x_features[:, ind_predictors_selected]
             self.num_feat_selec = self.x_features.shape[1]
@@ -141,8 +143,18 @@ class SvRegression():
         return shapley_val
 
 
-    # def check_norm_shap(self):
+    def check_norm_shap(self, predictors=None, list_r_squared=None):
+        if list_r_squared is None:
+            raise ValueError("list_r_squared cannot be None.")
+        r_squared_full = self.lin_reg.fit(self.x_features_norm, self.y_target_norm).score(self.x_features_norm, self.y_target_norm)
+        sum_shap = 0.0
 
+        for ind_feat in predictors:
+            shap = self.compute_shapley(self, r_squared_dum_compr=list_r_squared, target_pred=ind_feat, predictors=predictors)
+            sum_shap = sum_shap + shap
+
+        return {"r_squared_full": r_squared_full,
+                "sum_shape": sum_shap}
 
 # Testing:
 # Dataset path.
@@ -152,11 +164,13 @@ sv_reg = SvRegression(data=dataset,
                       ind_predictors_selected=[0, 1, 2, 3, 4],
                       target="qlead_auto")
 
-list_rsquareds = sv_reg.compute_list_r_squared()
+list_r_squareds = sv_reg.compute_list_r_squared()
+ind_preds = sv_reg.ind_predictors_selected
+dum_shap = sv_reg.compute_shapley(r_squared_dum_compr=list_r_squareds, target_pred=3, predictors=ind_preds)
+print(dum_shap)
+check_norm = sv_reg.check_norm_shap(predictors=ind_preds, list_r_squared=list_r_squareds)
 
-
-
-
+#print(check_norm)
 
 
 # Activate GPU acceleration.

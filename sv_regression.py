@@ -125,6 +125,7 @@ class SvRegression():
 
 
 # Testing:
+# Dataset path.
 dataset = "data/base_test_sv_reg_working.csv"
 sv_reg = SvRegression(data=dataset,
                       target="qlead_auto")
@@ -138,14 +139,6 @@ print(y_target.shape)
 print("shape: y_target normalized:")
 print(y_target_norm.shape)
 
-# b_coeffs = sv_reg.get_b()
-# print("shape: b_coeffs:")
-# print(b_coeffs.shape)
-
-# r_squared_dum = sv_reg.get_r_squared(predictors=(5, 20, 8))
-# print("r_squared_dum:")
-# print(r_squared_dum)
-
 dum_num = 5
 dum_predictors = list(range(dum_num))
 x_features_norm_dum = x_features_norm[:, dum_predictors]
@@ -153,26 +146,11 @@ x_features_norm_dum = x_features_norm[:, dum_predictors]
 # declaring model
 lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
 
-
-# Computing r_squared for all 2**dum_num combinations amongst predictors.
-# r_squared_dum = [0]
-# for ind in range(1, 2**dum_num):
-#     ic(ind)
-
-# # TODO: find a way to format the format code dynamically (e.g replace '5' by dum_num at runtime).
-#     dum_str = f"{ind:05b}"
-
-#     ic(dum_str)
-#     ic(dum_str[::-1])
-#     dum_mask = [bool(int(ind_f)) for ind_f in dum_str[::-1]]
-#     x_features_curr = x_features_norm_dum[:, dum_mask]
-#     lin_reg.fit(x_features_curr, y_target_norm)
-#     r_squared_dum.append(lin_reg.score(x_features_curr, y_target_norm))
-
 def get_rsquared_sk(ind=None):
     if ind == 0:
         return 0.0
     else:
+        # TODO: find a way to format the format code dynamically (e.g replace '5' by dum_num at runtime).
         ind_bin = f"{ind:05b}"
         dum_mask = [bool(int(ind_f)) for ind_f in ind_bin[::-1]]
         x_features_curr = x_features_norm_dum[:, dum_mask]
@@ -191,10 +169,10 @@ r_squared_dum_compr = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
 time_comp = timer() - start
 
 # Comptue usefullness as defined by formulae 18 from the article.
+# We do not pass r_squared_dum_compr as a parameter to avoid memory overload.
 def compute_usefullness(predictors=None, target=2, len_predictors=4):
 
     if len(predictors) == 1:
-
         # Rsquared corresponding to length 1 predictors:
         bin_predictors = [1 if x in predictors else 0 for x in range(len_predictors)]
         ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
@@ -209,7 +187,8 @@ def compute_usefullness(predictors=None, target=2, len_predictors=4):
         r_squared_with_target = r_squared_dum_compr[ind_rsquared]
 
         # Rsquared without target:
-        predictors.remove(target)
+        # predictors.remove(target)  # bad idea to use list.remove() --> add side effects to the function.
+        predictors = [x for x in predictors if x is not target]
         bin_predictors_without_target = [1 if x in predictors else 0 for x in range(len_predictors)]
         ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
         r_squared_with_target_without_target = r_squared_dum_compr[ind_rsquared_without_target]
@@ -223,17 +202,25 @@ dum_us = compute_usefullness(predictors=[0, 2, 3], target=2, len_predictors=dum_
 dum_target = 2
 ic(dum_predictors)
 
+def compute_shapley(target_pred=None, predictors=None):
+    num_predictors = len(predictors)
+    shapley_val = 0
 # First, second, third etc... term
-# for len_comb in range(len(dum_predictors)):
+    for len_comb in range(num_predictors):
+        sum_usefullness = 0
+        weight = (np.math.factorial(len_comb) * np.math.factorial(num_predictors - len_comb - 1)) / np.math.factorial(num_predictors)
+        for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
+            # coalition = list(coalition)  # convert to list to make it mutable, need to remove target (see function below).
+            usefullness = compute_usefullness(predictors=coalition,
+                                              target=target_pred,
+                                              len_predictors=len(predictors))
+            sum_usefullness = sum_usefullness + usefullness
+        shapley_val = shapley_val + weight * sum_usefullness
 
-for subset in filter(lambda x: dum_target in x, combinations(dum_predictors, 3)):
-    # subset = list(subset)  # convert to list to make it mutable, need to remove target (see function below).
-    # dum_us = compute_usefullness(predictors=subset, target=dum_target, len_predictors=len(dum_predictors))
-    ic(subset)
-    #ic(dum_us)
+    return shapley_val
 
-
-
+dum_shap = compute_shapley(target_pred=2, predictors=[1,2,3,4])
+ic(dum_shap)
 
 # ic(r_squared_dum_compr)
 # ic(dum_us)

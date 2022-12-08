@@ -150,7 +150,7 @@ class SvRegression():
         sum_shap = 0.0
 
         for ind_feat in predictors:
-            shap = self.compute_shapley(self, r_squared_dum_compr=list_r_squared, target_pred=ind_feat, predictors=predictors)
+            shap = self.compute_shapley(r_squared_dum_compr=list_r_squared, target_pred=ind_feat, predictors=predictors)
             sum_shap = sum_shap + shap
 
         return {"r_squared_full": r_squared_full,
@@ -170,7 +170,7 @@ dum_shap = sv_reg.compute_shapley(r_squared_dum_compr=list_r_squareds, target_pr
 print(dum_shap)
 check_norm = sv_reg.check_norm_shap(predictors=ind_preds, list_r_squared=list_r_squareds)
 
-#print(check_norm)
+print(check_norm)
 
 
 # Activate GPU acceleration.

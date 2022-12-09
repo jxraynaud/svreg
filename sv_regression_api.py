@@ -146,7 +146,7 @@ class SvRegression():
         and a r^squared is evaluated on each of them.
 
         Warning: this function can take a long time for running
-        depending on the number of predictors selected.
+        depending on the number of predictors selected in the dataset.
 
         Returns
         -------
@@ -160,59 +160,65 @@ class SvRegression():
         print(f"{round(time_comp, 2)} s to compute all r_squared.")
         return list_r_squared
 
-    def compute_usefullness(self, predictors=None, r_squared_dum_compr=None, target=2, len_predictors=4):
-        """Compute usefullness co
+    def compute_usefullness(self, list_r_squared, coalition, target=2):
+        """_summary_
 
         Parameters
         ----------
-        predictors : _type_, optional
-            _description_, by default None
-        r_squared_dum_compr : _type_, optional
-            _description_, by default None
+        list_r_squared : list[float]
+            list of R^2 corresponding to all coalitions of predictors.
+            If n predictors are selected in the regression,
+            this list has length 2^n.
+        coalition : list[int]
+            list of indices of predictors in the current coalition.
         target : int, optional
-            _description_, by default 2
-        len_predictors : int, optional
-            _description_, by default 4
+            index of the predictor whose usefullness if computed
+            for the given coalition, by default 2.
 
         Returns
         -------
-        _type_
-            _description_
+        usefullness : float
+            usefullness computed on the coalition "coalition" with target "target".
         """
-        if len(predictors) == 1:
+        len_predictors = self.num_feat_selec
+        if len(coalition) == 1:
             # Rsquared corresponding to length 1 predictors:
-            bin_predictors = [1 if x in predictors else 0 for x in range(len_predictors)]
-            ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
+            bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared = int("".join(str(x) for x in bin_coalition), 2)
 
-            r_squared = r_squared_dum_compr[ind_rsquared]
+            r_squared = list_r_squared[ind_rsquared]
 
             return r_squared
 
         else:
             # Rsquared with target:
-            bin_predictors = [1 if x in predictors else 0 for x in range(len_predictors)]
+            bin_predictors = [1 if x in coalition else 0 for x in range(len_predictors)]
             ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
-            r_squared_with_target = r_squared_dum_compr[ind_rsquared]
+            r_squared_with_target = list_r_squared[ind_rsquared]
 
             # Rsquared without target:
-            predictors = [x for x in predictors if x is not target]
-            bin_predictors_without_target = [1 if x in predictors else 0 for x in range(len_predictors)]
+            coalition = [x for x in coalition if x is not target]
+            bin_predictors_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
             ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
-            r_squared_without_target = r_squared_dum_compr[ind_rsquared_without_target]
+            r_squared_without_target = list_r_squared[ind_rsquared_without_target]
 
-            return r_squared_with_target - r_squared_without_target
+            usefullness = r_squared_with_target - r_squared_without_target
+            return usefullness
 
-    def compute_shapley(self, r_squared_dum_compr=None, target_pred=None, predictors=None):
+    def compute_shapley(self, list_r_squared=None, target_pred=None):
         """_summary_
 
         Parameters
         ----------
-        r_squared_dum_compr : _type_, optional
+        list_r_squared : _type_, optional
             _description_, by default None
         target_pred : _type_, optional
             _description_, by default None
-        predictors : _type_, optional
-            _description_, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
 
         Raises
         ------
@@ -221,12 +227,14 @@ class SvRegression():
         ValueError
             _description_
         """
-        if r_squared_dum_compr is None:
-            raise ValueError("r_squared_dum_compr cannot be None.")
-        if target_pred not in predictors:
+        num_predictors = self.num_feat_selec
+        predictors = self.ind_predictors_selected
+        if list_r_squared is None:
+            raise ValueError("list_r_squared cannot be None.")
+        if target_pred not in self.ind_predictors_selected:
             raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" +
                               """target_pred must be in predictors.""")
-        num_predictors = len(predictors)
+    # Initializing shapley value to 0.0.
         shapley_val = 0
     # First, second, third etc... term
         for len_comb in range(num_predictors):
@@ -235,23 +243,20 @@ class SvRegression():
             weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
 
             for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
-                usefullness = self.compute_usefullness(predictors=coalition,
-                                                       r_squared_dum_compr=r_squared_dum_compr,
-                                                       target=target_pred,
-                                                       len_predictors=len(predictors))
+                usefullness = self.compute_usefullness(list_r_squared=list_r_squared,
+                                                       coalition=coalition,
+                                                       target=target_pred)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
 
         return shapley_val
 
 
-    def check_norm_shap(self, predictors=None, list_r_squared=None):
+    def check_norm_shap(self, list_r_squared=None):
         """_summary_
 
         Parameters
         ----------
-        predictors : _type_, optional
-            _description_, by default None
         list_r_squared : _type_, optional
             _description_, by default None
 
@@ -271,8 +276,9 @@ class SvRegression():
         r_squared_full = lin_reg_fit.score(self.x_features_norm, self.y_targets_norm)
         sum_shap = 0.0
 
+        predictors = self.ind_predictors_selected
         for ind_feat in predictors:
-            shap = self.compute_shapley(r_squared_dum_compr=list_r_squared, target_pred=ind_feat, predictors=predictors)
+            shap = self.compute_shapley(list_r_squared=list_r_squared, target_pred=ind_feat)
             sum_shap = sum_shap + shap
 
         return {"r_squared_full": r_squared_full,
@@ -288,19 +294,15 @@ sv_reg = SvRegression(data=DATASET,
 
 feat_norm, tar_norm = sv_reg.normalize()
 feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
-ic(feat.shape)
-ic(tar.shape)
 
 list_r_squareds = sv_reg.compute_list_r_squared()
 
-ind_preds = sv_reg.ind_predictors_selected
-
-dum_shap = sv_reg.compute_shapley(r_squared_dum_compr=list_r_squareds, target_pred=3, predictors=ind_preds)
+dum_shap = sv_reg.compute_shapley(list_r_squared=list_r_squareds, target_pred=3)
 ic(dum_shap)
 
-check_norm = sv_reg.check_norm_shap(predictors=ind_preds, list_r_squared=list_r_squareds)
+check_norm = sv_reg.check_norm_shap(list_r_squared=list_r_squareds)
 
-print(check_norm)
+ic(check_norm)
 
 
 # Activate GPU acceleration.
@@ -310,7 +312,7 @@ print(check_norm)
 # I had an issue installing dpctl, turning off for now.
 # with config_context(target_offload="gpu:0"):
 
-# r_squared_dum_compr is defined as a global variable to avoid memory overload.
+# list_r_squared is defined as a global variable to avoid memory overload.
 # start = timer()
-# r_squared_dum_compr = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
+# list_r_squared = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
 # time_comp = timer() - start

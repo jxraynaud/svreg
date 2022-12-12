@@ -8,6 +8,7 @@ https://cran.r-project.org/web/packages/ShapleyValue/vignettes/ShapleyValue.html
 https://prof.bht-berlin.de/groemping/software/relaimpo/
 """
 from itertools import combinations
+
 # from timeit import default_timer as timer
 
 import numpy as np
@@ -35,22 +36,16 @@ class SvRegression:
         target=None,
     ):
 
-        self._data_sv = pd.read_csv(
-            data, index_col="date", parse_dates=True, infer_datetime_format=True
-        )
+        self._data_sv = pd.read_csv(data, index_col="date", parse_dates=True, infer_datetime_format=True)
         # Check that target is indeed in the dataset.
-        assert (
-            target in self._data_sv.columns
-        )  # check that the target is in the dataset.
+        assert target in self._data_sv.columns  # check that the target is in the dataset.
 
         # Todo: find a way more subtle to handle missing values.
         n_rows = self._data_sv.shape[0]
         self._data_sv = self._data_sv.dropna()
 
         n_rows_complete, n_cols = self._data_sv.shape
-        print(
-            f"{n_rows - n_rows_complete} rows have been deleted due to missing values."
-        )
+        print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
         print(f"{n_rows_complete} rows in the dataset: {data}.")
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
@@ -74,9 +69,7 @@ class SvRegression:
 
         # Normalizing x_features and y_target.
         self.x_features_norm = self._scaler_x.fit_transform(self.x_features)
-        self.y_targets_norm = self._scaler_y.fit_transform(
-            self.y_targets.reshape(-1, 1)
-        )
+        self.y_targets_norm = self._scaler_y.fit_transform(self.y_targets.reshape(-1, 1))
 
         # Defining a linear regression object to compute r_squared.
         self.lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
@@ -86,27 +79,32 @@ class SvRegression:
 
     @property
     def data_sv(self):
-        """_summary_
+        """Setter for the private _data_sv dataframe.
+        No setter should be written for this property,
+        making it a defacto "readonly" variable.
 
         Returns:
-            _type_: _description_
+          _data_sv : pandas dataframe
+          data used for the regression.
         """
 
         return self._data_sv
 
     @property
     def list_r_squared(self):
-        """_summary_
+        """Setter for the list_r_squared list.
+        No setter should be written for this property,
+        making it a defacto "readonly" variable.
 
         Returns:
-            _type_: _description_
+            self._list_r_squared : python list of length 2^nfeatures.
+            Contains the R^2 of regressions computed from the differents
+            coalitions of features.
         """
 
         if self._list_r_squared is None:
             # calculer le contenu.
-            self._list_r_squared = [
-                self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)
-            ]
+            self._list_r_squared = [self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)]
         return self._list_r_squared
 
     def normalize(self):
@@ -178,7 +176,8 @@ class SvRegression:
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):
-        """_summary_
+        """Compute the usefulness corresponding to the coalition
+        of predictors "coalition" with the target predictor "target".
 
         Parameters
         ----------
@@ -212,36 +211,35 @@ class SvRegression:
 
             # Rsquared without target:
             coalition = [x for x in coalition if x is not target]
-            bin_predictors_without_target = [
-                1 if x in coalition else 0 for x in range(len_predictors)
-            ]
-            ind_rsquared_without_target = int(
-                "".join(str(x) for x in bin_predictors_without_target), 2
-            )
+            bin_predictors_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
             r_squared_without_target = self.list_r_squared[ind_rsquared_without_target]
 
             usefullness = r_squared_with_target - r_squared_without_target
             return usefullness
 
-    def compute_shapley(self, target_pred=None):
-        """_summary_
+    def compute_shapley(self, target_pred=2):
+        """Compute shapley value using target_pred as the indice
+        of the predictor of interest.
 
         Parameters
         ----------
-        target_pred : _type_, optional
-            _description_, by default None
+        target_pred : int
+            index of the predictor of interest of the shapley value
+            to be computed, by default 2
 
         Returns
         -------
-        _type_
-            _description_
+        shapley_val : float
+            shapley value computed from the differents coalitions
+            of predictors that contain "target_pred".
 
         Raises
         ------
         ValueError
-            _description_
+            if list_r_squared is None.
         ValueError
-            _description_
+            if target_pred is not in self.ind_predictors_selected.
         """
 
         num_predictors = self.num_feat_selec
@@ -249,45 +247,38 @@ class SvRegression:
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         if target_pred not in self.ind_predictors_selected:
-            raise ValueError(
-                f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n"""
-                + """target_pred must be in predictors."""
-            )
+            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" + """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
         # First, second, third etc... term
         for len_comb in range(num_predictors):
             sum_usefullness = 0
             npfactor = np.math.factorial
-            weight = (
-                npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)
-            ) / npfactor(num_predictors)
+            weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
 
-            for coalition in filter(
-                lambda x: target_pred in x, combinations(predictors, len_comb)
-            ):
-                usefullness = (
-                    self.compute_usefullness(  # list_r_squared=self.list_r_squared,
-                        coalition=coalition, target=target_pred
-                    )
-                )
+            for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
+                usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
 
         return shapley_val
 
     def check_norm_shap(self):
-        """_summary_
+        """Compute both R^2 of the full model (all predictors)
+        and the sum of shapley values.
+        The two should be equal more or less numerical errors
+        (see eq. 19 of the paper cited in module docstring).
 
         Returns
         -------
-        _type_
-            _description_
+        Python dictionnary
+            Contains the R^2 of the full model (r_squared_full)
+            and the sum of shapley values (sum_shaps)
 
         Raises
         ------
         ValueError
-            _description_
+            if list_r_squared is None.
         """
 
         if self.list_r_squared is None:
@@ -298,21 +289,17 @@ class SvRegression:
 
         predictors = self.ind_predictors_selected
         for ind_feat in predictors:
-            shap = self.compute_shapley(  # list_r_squared=list_r_squared,
-                target_pred=ind_feat
-            )
+            shap = self.compute_shapley(target_pred=ind_feat)
             sum_shap = sum_shap + shap
 
-        return {"r_squared_full": r_squared_full, "sum_shape": sum_shap}
+        return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
 
 # Testing:
 # Dataset path.
 DATASET = "data/base_test_sv_reg_working.csv"
 
-sv_reg = SvRegression(
-    data=DATASET, ind_predictors_selected=list(range(8)), target="qlead_auto"
-)
+sv_reg = SvRegression(data=DATASET, ind_predictors_selected=list(range(8)), target="qlead_auto")
 
 feat_norm, tar_norm = sv_reg.normalize()
 feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)

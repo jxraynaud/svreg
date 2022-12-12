@@ -86,10 +86,22 @@ class SvRegression:
 
     @property
     def data_sv(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
+
         return self._data_sv
 
     @property
     def list_r_squared(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
+
         if self._list_r_squared is None:
             # calculer le contenu.
             self._list_r_squared = [

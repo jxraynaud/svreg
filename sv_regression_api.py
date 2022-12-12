@@ -8,7 +8,7 @@ https://cran.r-project.org/web/packages/ShapleyValue/vignettes/ShapleyValue.html
 https://prof.bht-berlin.de/groemping/software/relaimpo/
 """
 from itertools import combinations
-from timeit import default_timer as timer
+# from timeit import default_timer as timer
 
 import numpy as np
 import pandas as pd
@@ -22,34 +22,41 @@ from sklearn.preprocessing import StandardScaler
 # from scipy.stats import pearsonr
 # from typing import Tuple
 
-class SvRegression():
+
+class SvRegression:
     """This class performs linear regression using Shapley Values from game theory.
     Based on paper https://www.researchgate.net/publication/229728883_Analysis_of_Regression_in_Game_Theory_Approach
     """
-    def __init__(self,
-                 data=None,
-                 ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
-                 target=None):
 
-        self.data_sv = pd.read_csv(data,
-                                   index_col="date",
-                                   parse_dates=True,
-                                   infer_datetime_format=True)
+    def __init__(
+        self,
+        data=None,
+        ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
+        target=None,
+    ):
+
+        self._data_sv = pd.read_csv(
+            data, index_col="date", parse_dates=True, infer_datetime_format=True
+        )
         # Check that target is indeed in the dataset.
-        assert target in self.data_sv.columns  # check that the target is in the dataset.
+        assert (
+            target in self._data_sv.columns
+        )  # check that the target is in the dataset.
 
         # Todo: find a way more subtle to handle missing values.
-        n_rows = self.data_sv.shape[0]
-        self.data_sv = self.data_sv.dropna()
+        n_rows = self._data_sv.shape[0]
+        self._data_sv = self._data_sv.dropna()
 
-        n_rows_complete, n_cols = self.data_sv.shape
-        print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
+        n_rows_complete, n_cols = self._data_sv.shape
+        print(
+            f"{n_rows - n_rows_complete} rows have been deleted due to missing values."
+        )
         print(f"{n_rows_complete} rows in the dataset: {data}.")
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
         # Initializing features and target.
-        self.x_features = np.array(self.data_sv.drop(labels=target, axis=1))
-        self.y_targets = np.array(self.data_sv[target].ravel())
+        self.x_features = np.array(self._data_sv.drop(labels=target, axis=1))
+        self.y_targets = np.array(self._data_sv[target].ravel())
         # compute the number of features, to be corrected if ind_predictors_selected is not None.
         self.num_feat_selec = self.x_features.shape[1]
         self.ind_predictors_selected = list(range(self.x_features.shape[1]))
@@ -67,10 +74,28 @@ class SvRegression():
 
         # Normalizing x_features and y_target.
         self.x_features_norm = self._scaler_x.fit_transform(self.x_features)
-        self.y_targets_norm = self._scaler_y.fit_transform(self.y_targets.reshape(-1, 1))
+        self.y_targets_norm = self._scaler_y.fit_transform(
+            self.y_targets.reshape(-1, 1)
+        )
 
         # Defining a linear regression object to compute r_squared.
         self.lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
+
+        # empty list
+        self._list_r_squared = None
+
+    @property
+    def data_sv(self):
+        return self._data_sv
+
+    @property
+    def list_r_squared(self):
+        if self._list_r_squared is None:
+            # calculer le contenu.
+            self._list_r_squared = [
+                self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)
+            ]
+        return self._list_r_squared
 
     def normalize(self):
         """Normalize features and targets selected using
@@ -128,6 +153,7 @@ class SvRegression():
             r^squared computed on the coalition of features obtained from
             the binary representation of ind.
         """
+
         if ind == 0:
             return 0.0
         else:
@@ -139,36 +165,11 @@ class SvRegression():
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
             return r_squared
 
-    def compute_list_r_squared(self):
-        """Compute all R^2 by performing linear regression
-        on all coalitions of selected predictors.
-        if n predictors are selected, 2^n coalitions are possible
-        and a r^squared is evaluated on each of them.
-
-        Warning: this function can take a long time for running
-        depending on the number of predictors selected in the dataset.
-
-        Returns
-        -------
-        list_r_squared : list[float]
-            python list of length 2^n, containing the R^2
-            for all coalitions of predictors possible.
-        """
-        start = timer()
-        list_r_squared = [self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)]
-        time_comp = timer() - start
-        print(f"{round(time_comp, 2)} s to compute all r_squared.")
-        return list_r_squared
-
-    def compute_usefullness(self, list_r_squared, coalition, target=2):
+    def compute_usefullness(self, coalition, target=2):
         """_summary_
 
         Parameters
         ----------
-        list_r_squared : list[float]
-            list of R^2 corresponding to all coalitions of predictors.
-            If n predictors are selected in the regression,
-            this list has length 2^n.
         coalition : list[int]
             list of indices of predictors in the current coalition.
         target : int, optional
@@ -180,13 +181,14 @@ class SvRegression():
         usefullness : float
             usefullness computed on the coalition "coalition" with target "target".
         """
+
         len_predictors = self.num_feat_selec
         if len(coalition) == 1:
             # Rsquared corresponding to length 1 predictors:
             bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
             ind_rsquared = int("".join(str(x) for x in bin_coalition), 2)
 
-            r_squared = list_r_squared[ind_rsquared]
+            r_squared = self.list_r_squared[ind_rsquared]
 
             return r_squared
 
@@ -194,24 +196,26 @@ class SvRegression():
             # Rsquared with target:
             bin_predictors = [1 if x in coalition else 0 for x in range(len_predictors)]
             ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
-            r_squared_with_target = list_r_squared[ind_rsquared]
+            r_squared_with_target = self.list_r_squared[ind_rsquared]
 
             # Rsquared without target:
             coalition = [x for x in coalition if x is not target]
-            bin_predictors_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
-            ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
-            r_squared_without_target = list_r_squared[ind_rsquared_without_target]
+            bin_predictors_without_target = [
+                1 if x in coalition else 0 for x in range(len_predictors)
+            ]
+            ind_rsquared_without_target = int(
+                "".join(str(x) for x in bin_predictors_without_target), 2
+            )
+            r_squared_without_target = self.list_r_squared[ind_rsquared_without_target]
 
             usefullness = r_squared_with_target - r_squared_without_target
             return usefullness
 
-    def compute_shapley(self, list_r_squared=None, target_pred=None):
+    def compute_shapley(self, target_pred=None):
         """_summary_
 
         Parameters
         ----------
-        list_r_squared : _type_, optional
-            _description_, by default None
         target_pred : _type_, optional
             _description_, by default None
 
@@ -227,38 +231,41 @@ class SvRegression():
         ValueError
             _description_
         """
+
         num_predictors = self.num_feat_selec
         predictors = self.ind_predictors_selected
-        if list_r_squared is None:
+        if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         if target_pred not in self.ind_predictors_selected:
-            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" +
-                              """target_pred must be in predictors.""")
-    # Initializing shapley value to 0.0.
+            raise ValueError(
+                f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n"""
+                + """target_pred must be in predictors."""
+            )
+        # Initializing shapley value to 0.0.
         shapley_val = 0
-    # First, second, third etc... term
+        # First, second, third etc... term
         for len_comb in range(num_predictors):
             sum_usefullness = 0
             npfactor = np.math.factorial
-            weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
+            weight = (
+                npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)
+            ) / npfactor(num_predictors)
 
-            for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
-                usefullness = self.compute_usefullness(list_r_squared=list_r_squared,
-                                                       coalition=coalition,
-                                                       target=target_pred)
+            for coalition in filter(
+                lambda x: target_pred in x, combinations(predictors, len_comb)
+            ):
+                usefullness = (
+                    self.compute_usefullness(  # list_r_squared=self.list_r_squared,
+                        coalition=coalition, target=target_pred
+                    )
+                )
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
 
         return shapley_val
 
-
-    def check_norm_shap(self, list_r_squared=None):
+    def check_norm_shap(self):
         """_summary_
-
-        Parameters
-        ----------
-        list_r_squared : _type_, optional
-            _description_, by default None
 
         Returns
         -------
@@ -270,7 +277,8 @@ class SvRegression():
         ValueError
             _description_
         """
-        if list_r_squared is None:
+
+        if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         lin_reg_fit = self.lin_reg.fit(self.x_features_norm, self.y_targets_norm)
         r_squared_full = lin_reg_fit.score(self.x_features_norm, self.y_targets_norm)
@@ -278,29 +286,33 @@ class SvRegression():
 
         predictors = self.ind_predictors_selected
         for ind_feat in predictors:
-            shap = self.compute_shapley(list_r_squared=list_r_squared, target_pred=ind_feat)
+            shap = self.compute_shapley(  # list_r_squared=list_r_squared,
+                target_pred=ind_feat
+            )
             sum_shap = sum_shap + shap
 
-        return {"r_squared_full": r_squared_full,
-                "sum_shape": sum_shap}
+        return {"r_squared_full": r_squared_full, "sum_shape": sum_shap}
+
 
 # Testing:
 # Dataset path.
 DATASET = "data/base_test_sv_reg_working.csv"
 
-sv_reg = SvRegression(data=DATASET,
-                      ind_predictors_selected=list(range(8)),
-                      target="qlead_auto")
+sv_reg = SvRegression(
+    data=DATASET, ind_predictors_selected=list(range(8)), target="qlead_auto"
+)
 
 feat_norm, tar_norm = sv_reg.normalize()
 feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
 
-list_r_squareds = sv_reg.compute_list_r_squared()
 
-dum_shap = sv_reg.compute_shapley(list_r_squared=list_r_squareds, target_pred=3)
+list_r_squareds = sv_reg.list_r_squared
+# sv_reg.data_sv = 2 # raise un AttributeError, because we are trying to set a property with no setter --> check.
+
+dum_shap = sv_reg.compute_shapley(target_pred=3)  # list_r_squared=list_r_squareds
 ic(dum_shap)
 
-check_norm = sv_reg.check_norm_shap(list_r_squared=list_r_squareds)
+check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
 
 ic(check_norm)
 

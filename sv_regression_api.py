@@ -197,14 +197,9 @@ class SvRegression:
         len_predictors = self.num_feat_selec
 
         if len(coalition) == 1:
-            # ic(coalition)
             # Rsquared corresponding to length 1 predictors:
             bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
-            # ic(bin_coalition)
             ind_rsquared = int("".join(str(x) for x in bin_coalition), 2)
-            # ic(ind_rsquared)
-            # input()
-
             r_squared = self.list_r_squared[ind_rsquared]
 
             return r_squared
@@ -215,20 +210,15 @@ class SvRegression:
             ind_rsquared = int("".join(str(x) for x in bin_coalition_with_target), 2)
             r_squared_with_target = self.list_r_squared[ind_rsquared]
 
-            # ic(bin_coalition_with_target)
-
             # Rsquared without target:
             coalition = [x for x in coalition if x is not target]
             bin_coalition_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
             ind_rsquared_without_target = int("".join(str(x) for x in bin_coalition_without_target), 2)
             r_squared_without_target = self.list_r_squared[ind_rsquared_without_target]
 
-            # Debug.
-            # ic(bin_predictors)
-            # ic(bin_predictors_without_target)
-            # input("Waiting\n")
-
+            # Getting usefullness:
             usefullness = r_squared_with_target - r_squared_without_target
+
             return usefullness
 
     def compute_shapley(self, target_pred=2):
@@ -260,32 +250,29 @@ class SvRegression:
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         if target_pred not in self.ind_predictors_selected:
-            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" + """target_pred must be in predictors.""")
+            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" + \
+                              """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
         # First, second, third etc... term
-        for len_comb in range(0, num_predictors):
+        for len_comb in range(0, num_predictors + 1):
             sum_usefullness = 0
-            npfactor = np.math.factorial
-            # weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
-            # Debug
-            weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
+            if len_comb == 0:
+                weight = 0
+            else:
+                weight = self.get_weights(len_comb_int=len_comb, num_predictors=num_predictors)
 
-            # if len_comb == 1:
-            #     ic(weight)
-            #     input()
-            ic(weight)
-            # ic(len_comb)
             for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
-                # ic(coalition)
-                # input("waiting")
-                # Debug
-                ic(coalition)
                 usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
-            # input("waiting")
         return shapley_val
+
+    def get_weights(self, len_comb_int=0, num_predictors=0):
+        npfactor = np.math.factorial
+        len_comb_int = len_comb_int - 1
+        weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
+        return weight
 
     def check_norm_shap(self):
         """Compute both R^2 of the full model (all predictors)
@@ -311,13 +298,10 @@ class SvRegression:
         r_squared_full = lin_reg_fit.score(self.x_features_norm, self.y_targets_norm)
 
         sum_shap = 0.0
-
         predictors = self.ind_predictors_selected
         for ind_feat in predictors:
-            # ic(ind_feat)
             shap = self.compute_shapley(target_pred=ind_feat)
             sum_shap = sum_shap + shap
-        # input()
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
 
@@ -325,18 +309,16 @@ class SvRegression:
 # Dataset path.
 DATASET = "data/base_test_sv_reg_working.csv"
 
-sv_reg = SvRegression(data=DATASET, ind_predictors_selected=list(range(5)), target="qlead_auto")
+sv_reg = SvRegression(data=DATASET,
+                      ind_predictors_selected=list(range(5)),
+                      target="qlead_auto")
 
-feat_norm, tar_norm = sv_reg.normalize()
-feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
+# feat_norm, tar_norm = sv_reg.normalize()
+# feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
 
+check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
 
-dum_shap = sv_reg.compute_shapley(target_pred=0)
-
-
-# check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
-
-# ic(check_norm)
+ic(check_norm)
 
 
 # Activate GPU acceleration.

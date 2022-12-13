@@ -20,7 +20,7 @@ patch_sklearn()
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
-# from scipy.stats import pearsonr
+from scipy.stats import pearsonr
 # from typing import Tuple
 
 
@@ -274,6 +274,30 @@ class SvRegression:
         weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
         return weight
 
+    def fit(self):
+        """Compute the coefficients of regression ajusted
+        using Shapley Values.
+
+        Returns
+        -------
+        coeffs: numpy array of shape (self.num_feat_selec,)
+            Coefficients of regressions for each predictor.
+        """
+
+        coeffs = np.zeros(self.num_feat_selec)
+        target = self.y_targets_norm.ravel()
+
+        for ind_feat in range(0, self.num_feat_selec):
+            coeffs[ind_feat] = self.compute_shapley(target_pred=ind_feat)
+            # Normalizing the shapley value with the correlation coefficient between
+            # the current feature and the target.
+            curr_feat = self.x_features_norm[:, ind_feat]
+            # TODO: take the p-value into account to test the significance
+            # of the correlation.
+            corr = pearsonr(curr_feat, target).statistic
+            coeffs[ind_feat] = coeffs[ind_feat] / corr
+        return coeffs
+
     def check_norm_shap(self):
         """Compute both R^2 of the full model (all predictors)
         and the sum of shapley values.
@@ -313,12 +337,15 @@ sv_reg = SvRegression(data=DATASET,
                       ind_predictors_selected=list(range(5)),
                       target="qlead_auto")
 
+coeffs = sv_reg.fit()
+ic(coeffs)
+
 # feat_norm, tar_norm = sv_reg.normalize()
 # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
 
-check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
-
-ic(check_norm)
+# Test check_norm works !
+# check_norm = sv_reg.check_norm_shap()
+# ic(check_norm)
 
 
 # Activate GPU acceleration.

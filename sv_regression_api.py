@@ -45,6 +45,7 @@ class SvRegression:
         self._data_sv = self._data_sv.dropna()
 
         n_rows_complete, n_cols = self._data_sv.shape
+
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
         print(f"{n_rows_complete} rows in the dataset: {data}.")
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
@@ -54,7 +55,7 @@ class SvRegression:
         self.y_targets = np.array(self._data_sv[target].ravel())
         # compute the number of features, to be corrected if ind_predictors_selected is not None.
         self.num_feat_selec = self.x_features.shape[1]
-        self.ind_predictors_selected = list(range(self.x_features.shape[1]))
+        self.ind_predictors_selected = list(range(self.num_feat_selec))
 
         if ind_predictors_selected is not None:
             self.ind_predictors_selected = ind_predictors_selected
@@ -103,7 +104,6 @@ class SvRegression:
         """
 
         if self._list_r_squared is None:
-            # calculer le contenu.
             self._list_r_squared = [self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)]
         return self._list_r_squared
 
@@ -165,6 +165,7 @@ class SvRegression:
         """
 
         if ind == 0:
+
             return 0.0
         else:
             ind_form = f"0{self.num_feat_selec}b"
@@ -194,10 +195,15 @@ class SvRegression:
         """
 
         len_predictors = self.num_feat_selec
+
         if len(coalition) == 1:
+            # ic(coalition)
             # Rsquared corresponding to length 1 predictors:
             bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
+            # ic(bin_coalition)
             ind_rsquared = int("".join(str(x) for x in bin_coalition), 2)
+            # ic(ind_rsquared)
+            # input()
 
             r_squared = self.list_r_squared[ind_rsquared]
 
@@ -205,15 +211,22 @@ class SvRegression:
 
         else:
             # Rsquared with target:
-            bin_predictors = [1 if x in coalition else 0 for x in range(len_predictors)]
-            ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
+            bin_coalition_with_target = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared = int("".join(str(x) for x in bin_coalition_with_target), 2)
             r_squared_with_target = self.list_r_squared[ind_rsquared]
+
+            # ic(bin_coalition_with_target)
 
             # Rsquared without target:
             coalition = [x for x in coalition if x is not target]
-            bin_predictors_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
-            ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
+            bin_coalition_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared_without_target = int("".join(str(x) for x in bin_coalition_without_target), 2)
             r_squared_without_target = self.list_r_squared[ind_rsquared_without_target]
+
+            # Debug.
+            # ic(bin_predictors)
+            # ic(bin_predictors_without_target)
+            # input("Waiting\n")
 
             usefullness = r_squared_with_target - r_squared_without_target
             return usefullness
@@ -251,16 +264,27 @@ class SvRegression:
         # Initializing shapley value to 0.0.
         shapley_val = 0
         # First, second, third etc... term
-        for len_comb in range(num_predictors):
+        for len_comb in range(0, num_predictors):
             sum_usefullness = 0
             npfactor = np.math.factorial
+            # weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
+            # Debug
             weight = (npfactor(len_comb) * npfactor(num_predictors - len_comb - 1)) / npfactor(num_predictors)
 
+            # if len_comb == 1:
+            #     ic(weight)
+            #     input()
+            ic(weight)
+            # ic(len_comb)
             for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
+                # ic(coalition)
+                # input("waiting")
+                # Debug
+                ic(coalition)
                 usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
-
+            # input("waiting")
         return shapley_val
 
     def check_norm_shap(self):
@@ -285,13 +309,15 @@ class SvRegression:
             raise ValueError("list_r_squared cannot be None.")
         lin_reg_fit = self.lin_reg.fit(self.x_features_norm, self.y_targets_norm)
         r_squared_full = lin_reg_fit.score(self.x_features_norm, self.y_targets_norm)
+
         sum_shap = 0.0
 
         predictors = self.ind_predictors_selected
         for ind_feat in predictors:
+            # ic(ind_feat)
             shap = self.compute_shapley(target_pred=ind_feat)
             sum_shap = sum_shap + shap
-
+        # input()
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
 
@@ -299,21 +325,18 @@ class SvRegression:
 # Dataset path.
 DATASET = "data/base_test_sv_reg_working.csv"
 
-sv_reg = SvRegression(data=DATASET, ind_predictors_selected=list(range(8)), target="qlead_auto")
+sv_reg = SvRegression(data=DATASET, ind_predictors_selected=list(range(5)), target="qlead_auto")
 
 feat_norm, tar_norm = sv_reg.normalize()
 feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
 
 
-list_r_squareds = sv_reg.list_r_squared
-# sv_reg.data_sv = 2 # raise un AttributeError, because we are trying to set a property with no setter --> check.
+dum_shap = sv_reg.compute_shapley(target_pred=0)
 
-dum_shap = sv_reg.compute_shapley(target_pred=3)  # list_r_squared=list_r_squareds
-ic(dum_shap)
 
-check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
+# check_norm = sv_reg.check_norm_shap()  # list_r_squared=list_r_squareds
 
-ic(check_norm)
+# ic(check_norm)
 
 
 # Activate GPU acceleration.

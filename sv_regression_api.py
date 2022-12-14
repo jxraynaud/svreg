@@ -325,12 +325,16 @@ class SvRegression:
             in the unnormalized basis.
             The remaining elements are the coefficients of regressions for each predictor.
         """
-        means = self._scaler_x.mean_
-        stds = np.sqrt(self._scaler_x.var_)
-        offset = - (means / stds).sum()
-        self.coeffs = self.coeffs / stds
+        means_x = self._scaler_x.mean_
+        means_y = self._scaler_y.mean_
 
-        self.coeffs = np.concatenate(([offset], self.coeffs))
+        stds_x = np.sqrt(self._scaler_x.var_)
+        stds_y = np.sqrt(self._scaler_y.var_)
+
+        self.coeffs = (self.coeffs * stds_y)/ stds_x
+        offset = means_y - ((means_x * stds_y )/ stds_x).sum()
+
+        self.coeffs = np.concatenate((offset, self.coeffs))
 
         return self.coeffs
 

@@ -7,20 +7,20 @@ See for an implementation in R:
 https://cran.r-project.org/web/packages/ShapleyValue/vignettes/ShapleyValue.html
 https://prof.bht-berlin.de/groemping/software/relaimpo/
 """
-from itertools import combinations
 
-# from timeit import default_timer as timer
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from alive_progress import alive_bar
 from icecream import ic
+from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
 
 patch_sklearn()
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
-from scipy.stats import pearsonr
 # from typing import Tuple
 
 
@@ -107,7 +107,10 @@ class SvRegression:
         """
 
         if self._list_r_squared is None:
-            self._list_r_squared = [self._get_rsquared_sk(ind) for ind in range(0, 2**self.num_feat_selec)]
+            num_r_squareds = 2**self.num_feat_selec
+            print(f"Computing the {num_r_squareds} linears regressions.")
+            with alive_bar(num_r_squareds, title="Linear regressions") as bar_:
+                self._list_r_squared = [self._get_rsquared_sk(ind, bar_=bar_) for ind in range(0, num_r_squareds)]
         return self._list_r_squared
 
     def normalize(self):
@@ -147,7 +150,7 @@ class SvRegression:
         y_targets = self._scaler_y.inverse_transform(y_features_norm)
         return x_features, y_targets
 
-    def _get_rsquared_sk(self, ind):
+    def _get_rsquared_sk(self, ind, bar_=None):
         """Compute a R^2 using the class LinearRegression from Scikit Learn Intelex.
         Features onto which the regression is performed are selected using a boolean
         mask obtained from the binary representation of ind.
@@ -159,6 +162,8 @@ class SvRegression:
             indice whose binary representation serves to compute a boolean mask
             which is used to select a given coalition of features.
             If ind = 0, R^2 = 0.0 is returned.
+        bar_ : context manager from alive_progress.
+            Context manager used to track the progresses of the alive progress bar.
 
         Returns
         -------
@@ -168,7 +173,6 @@ class SvRegression:
         """
 
         if ind == 0:
-
             return 0.0
         else:
             ind_form = f"0{self.num_feat_selec}b"
@@ -177,6 +181,8 @@ class SvRegression:
             x_features_curr = self.x_features_norm[:, mask]
             self.lin_reg.fit(x_features_curr, self.y_targets_norm)
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
+            # Update the progress bar after each linear regression computation.
+            bar_()
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):
@@ -300,6 +306,8 @@ class SvRegression:
             # of the correlation.
             corr = pearsonr(curr_feat, target).statistic
             self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
+
+        # Unnormalize coefficients of the Shapley Value regression.
         self._unnormalize_coeffs()
 
         return self.coeffs
@@ -357,36 +365,38 @@ class SvRegression:
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
 
-# Testing:
-# Dataset path.
-DATASET = "data/base_test_sv_reg_working.csv"
+if __name__ == "__main__":
 
-sv_reg = SvRegression(data=DATASET,
-                      ind_predictors_selected=list(range(5)),
-                      target="qlead_auto")
+    # Testing:
+    # Dataset path.
+    DATASET = "data/base_test_sv_reg_working.csv"
 
-
-coeffs = sv_reg.fit()
-ic(sv_reg.coeffs)
-
-# sv_reg.unnormalize_coeffs()
-
-# feat_norm, tar_norm = sv_reg.normalize()
-# feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
-
-# Test check_norm works !
-# check_norm = sv_reg.check_norm_shap()
-# ic(check_norm)
+    sv_reg = SvRegression(data=DATASET,
+                        ind_predictors_selected=list(range(5)),
+                        target="qlead_auto")
 
 
-# Activate GPU acceleration.
-# Problem: requires dpctl to work:
-# https://pypi.org/project/dpctl/
+    coeffs = sv_reg.fit()
+    ic(sv_reg.coeffs)
 
-# I had an issue installing dpctl, turning off for now.
-# with config_context(target_offload="gpu:0"):
+    # sv_reg.unnormalize_coeffs()
 
-# list_r_squared is defined as a global variable to avoid memory overload.
-# start = timer()
-# list_r_squared = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
-# time_comp = timer() - start
+    # feat_norm, tar_norm = sv_reg.normalize()
+    # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
+
+    # Test check_norm works !
+    # check_norm = sv_reg.check_norm_shap()
+    # ic(check_norm)
+
+
+    # Activate GPU acceleration.
+    # Problem: requires dpctl to work:
+    # https://pypi.org/project/dpctl/
+
+    # I had an issue installing dpctl, turning off for now.
+    # with config_context(target_offload="gpu:0"):
+
+    # list_r_squared is defined as a global variable to avoid memory overload.
+    # start = timer()
+    # list_r_squared = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
+    # time_comp = timer() - start

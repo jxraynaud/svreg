@@ -1,49 +1,68 @@
+"""
+Module Docstring: regression with shapley values.
+See for a brief explanation of what Shapley Value regression is:
+https://www.displayr.com/shapley-value-regression/
+https://stats.stackexchange.com/questions/234874/what-is-shapley-value-regression-and-how-does-one-implement-it
+See for an implementation in R:
+https://cran.r-project.org/web/packages/ShapleyValue/vignettes/ShapleyValue.html
+https://prof.bht-berlin.de/groemping/software/relaimpo/
+"""
+
+from itertools import combinations
+
 import numpy as np
 import pandas as pd
-
-from itertools import chain, combinations
-from timeit import default_timer as timer
+from alive_progress import alive_bar
 from icecream import ic
-from sklearnex import patch_sklearn, config_context
+from scipy.stats import pearsonr
+from sklearnex import patch_sklearn
 
 patch_sklearn()
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
-from scipy.stats import pearsonr
-from icecream import ic
-from typing import Tuple
+# from typing import Tuple
 
 
-class SvRegression():
-
+class SvRegression:
     """This class performs linear regression using Shapley Values from game theory.
     Based on paper https://www.researchgate.net/publication/229728883_Analysis_of_Regression_in_Game_Theory_Approach
     """
-    def __init__(self,
-                 data=None,
-                 target=None,
-                 tol_missing=2):
 
-        self.data_sv = pd.read_csv(data,
-                                   index_col="date",
-                                   parse_dates=True,
-                                   infer_datetime_format=True)
+    def __init__(
+        self,
+        data=None,
+        ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
+        target=None,
+    ):
+
+        self._data_sv = pd.read_csv(data, index_col="date", parse_dates=True, infer_datetime_format=True)
         # Check that target is indeed in the dataset.
-        assert target in self.data_sv.columns  # check that the target is in the dataset.
+        assert target in self._data_sv.columns  # check that the target is in the dataset.
 
         # Todo: find a way more subtle to handle missing values.
-        n_rows = self.data_sv.shape[0]
-        self.data_sv = self.data_sv.dropna()
+        n_rows = self._data_sv.shape[0]
+        self._data_sv = self._data_sv.dropna()
 
-        n_rows_complete, n_cols = self.data_sv.shape
+        n_rows_complete, n_cols = self._data_sv.shape
+
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
         print(f"{n_rows_complete} rows in the dataset: {data}.")
-        print(f"{n_cols - 1} features (regressors) present.")
+        print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
         # Initializing features and target.
-        self.x_features = np.array(self.data_sv.drop(labels=target, axis=1))
-        self.y_target = np.array(self.data_sv[target].ravel())
+        self.x_features = np.array(self._data_sv.drop(labels=target, axis=1))
+        self.y_targets = np.array(self._data_sv[target].ravel())
+        # compute the number of features, to be corrected if ind_predictors_selected is not None.
+        self.num_feat_selec = self.x_features.shape[1]
+        self.ind_predictors_selected = list(range(self.num_feat_selec))
+
+        if ind_predictors_selected is not None:
+            self.ind_predictors_selected = ind_predictors_selected
+            # Selecting only selected predictors.
+            self.x_features = self.x_features[:, ind_predictors_selected]
+            self.num_feat_selec = self.x_features.shape[1]
+            print(f"{self.num_feat_selec} features selected.")
 
         # Scalers for features and target:
         self._scaler_x = StandardScaler()
@@ -51,164 +70,337 @@ class SvRegression():
 
         # Normalizing x_features and y_target.
         self.x_features_norm = self._scaler_x.fit_transform(self.x_features)
-        self.y_target_norm = self._scaler_y.fit_transform(self.y_target.reshape(-1, 1))
+        self.y_targets_norm = self._scaler_y.fit_transform(self.y_targets.reshape(-1, 1))
 
-        # initializing C (sample correlations, size (n, n)) and r (sample-target correlations, size (n,)).
-        self.c_jk = np.matmul(self.x_features.T, self.x_features)
-        self.r_j = np.matmul(self.x_features.T, self.y_target)
+        # Defining a linear regression object to compute r_squared.
+        self.lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
+
+        # empty list.
+        self._list_r_squared = None
+
+        # initializing coefficients array.
+        self.coeffs = np.zeros(self.num_feat_selec)
+
+    @property
+    def data_sv(self):
+        """Setter for the private _data_sv dataframe.
+        No setter should be written for this property,
+        making it a defacto "readonly" variable.
+
+        Returns:
+          _data_sv : pandas dataframe
+          data used for the regression.
+        """
+
+        return self._data_sv
+
+    @property
+    def list_r_squared(self):
+        """Setter for the list_r_squared list.
+        No setter should be written for this property,
+        making it a defacto "readonly" variable.
+
+        Returns:
+            self._list_r_squared : python list of length 2^nfeatures.
+            Contains the R^2 of regressions computed from the differents
+            coalitions of features.
+        """
+
+        if self._list_r_squared is None:
+            num_r_squareds = 2**self.num_feat_selec
+            print(f"Computing the {num_r_squareds} linears regressions.")
+            with alive_bar(num_r_squareds, title="Linear regressions") as bar_:
+                self._list_r_squared = [self._get_rsquared_sk(ind, bar_=bar_) for ind in range(0, num_r_squareds)]
+        return self._list_r_squared
 
     def normalize(self):
+        """Normalize features and targets selected using
+        the class StandardScaler from Scikit-Learn.
+
+        Returns
+        -------
+        x_features_norm : ndarray of shape (n_sample, n_features)
+            Features normalized (each feature has zero mean and unit variance).
+        y_targets_norm : ndarray of shape (n_sample, 1)
+            Targets normalized (zero mean and unit variance).
+        """
         x_features_norm = self._scaler_x.fit_transform(self.x_features)
-        y_target_norm = self._scaler_y.fit_transform(self.y_target.reshape(-1, 1))
-        return x_features_norm, y_target_norm
+        y_targets_norm = self._scaler_y.fit_transform(self.y_targets.reshape(-1, 1))
+        return x_features_norm, y_targets_norm
 
     def unnormalize(self, x_features_norm, y_features_norm):
+        """Denormalize features and targets using
+        the class StandardScaler from Scikit-Learn.
+
+        Parameters
+        ----------
+        x_features_norm : ndarray of shape (n_sample, n_features)
+            Features normalized (each feature has zero mean and unit variance).
+        y_targets_norm : ndarray of shape (n_sample, 1)
+            Targets normalized (zero mean and unit variance).
+
+        Returns
+        -------
+        x_features : ndarray of shape (n_sample, n_features)
+            Features unnormalized.
+        y_target : ndarray of shape (n_sample, 1)
+            Targets unnormalized (zero mean and unit variance).
+        """
         x_features = self._scaler_x.inverse_transform(x_features_norm)
-        y_features = self._scaler_y.inverse_transform(y_features_norm)
-        return x_features, y_features
+        y_targets = self._scaler_y.inverse_transform(y_features_norm)
+        return x_features, y_targets
 
-    def get_c_jk(self):
-        return np.matmul(self.x_features_norm.T, self.x_features_norm)
+    def _get_rsquared_sk(self, ind, bar_=None):
+        """Compute a R^2 using the class LinearRegression from Scikit Learn Intelex.
+        Features onto which the regression is performed are selected using a boolean
+        mask obtained from the binary representation of ind.
+        This method is intended for internal use only.
 
-    def get_r_j(self):
-        return np.matmul(self.x_features_norm.T, self.y_target_norm)
+        Parameters
+        ----------
+        ind : int
+            indice whose binary representation serves to compute a boolean mask
+            which is used to select a given coalition of features.
+            If ind = 0, R^2 = 0.0 is returned.
+        bar_ : context manager from alive_progress.
+            Context manager used to track the progresses of the alive progress bar.
 
-    def get_b(self):
-        c_inv = np.linalg.inv(self.get_c_jk())
-        return np.matmul(c_inv, self.get_r_j())
+        Returns
+        -------
+        r_squared : float
+            r^squared computed on the coalition of features obtained from
+            the binary representation of ind.
+        """
 
-    def get_r_squared(self, predictors: Tuple[int, ...] = None) -> float:
-        n_features = self.x_features_norm.shape[1]
-        if predictors is not None:
-            if not all(0 <= elem <= n_features for elem in predictors):
-                raise ValueError(f"All elements of predictors must be in between 0 and {n_features - 1}.")
-        # Defining x_features that corresponds to the model defined by predictors:
-            x_features_norm = self.x_features_norm[:, predictors]
+        if ind == 0:
+            return 0.0
         else:
-        # We get the model with all predictors.
-            x_features_norm = self.x_features_norm
+            ind_form = f"0{self.num_feat_selec}b"
+            ind_bin = format(ind, ind_form)
+            mask = [bool(int(ind_f)) for ind_f in ind_bin[::-1]]
+            x_features_curr = self.x_features_norm[:, mask]
+            self.lin_reg.fit(x_features_curr, self.y_targets_norm)
+            r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
+            # Update the progress bar after each linear regression computation.
+            bar_()
+            return r_squared
 
-        y_target_norm = self.y_target_norm
-        n_features = x_features_norm.shape[1]
-        c_jk_norm = np.matmul(x_features_norm.T, x_features_norm)
-        r_j_norm = np.matmul(x_features_norm.T, y_target_norm)
-        b_j_norm = np.matmul(np.linalg.inv(c_jk_norm), r_j_norm)
-        r_squared_norm = np.matmul(b_j_norm.T, r_j_norm)
+    def compute_usefullness(self, coalition, target=2):
+        """Compute the usefulness corresponding to the coalition
+        of predictors "coalition" with the target predictor "target".
 
-        return r_squared_norm.ravel().item()
+        Parameters
+        ----------
+        coalition : list[int]
+            list of indices of predictors in the current coalition.
+        target : int, optional
+            index of the predictor whose usefullness if computed
+            for the given coalition, by default 2.
+
+        Returns
+        -------
+        usefullness : float
+            usefullness computed on the coalition "coalition" with target "target".
+        """
+
+        len_predictors = self.num_feat_selec
+
+        if len(coalition) == 1:
+            # Rsquared corresponding to length 1 predictors:
+            bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared = int("".join(str(x) for x in bin_coalition), 2)
+            r_squared = self.list_r_squared[ind_rsquared]
+
+            return r_squared
+
+        else:
+            # Rsquared with target:
+            bin_coalition_with_target = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared = int("".join(str(x) for x in bin_coalition_with_target), 2)
+            r_squared_with_target = self.list_r_squared[ind_rsquared]
+
+            # Rsquared without target:
+            coalition = [x for x in coalition if x is not target]
+            bin_coalition_without_target = [1 if x in coalition else 0 for x in range(len_predictors)]
+            ind_rsquared_without_target = int("".join(str(x) for x in bin_coalition_without_target), 2)
+            r_squared_without_target = self.list_r_squared[ind_rsquared_without_target]
+
+            # Getting usefullness:
+            usefullness = r_squared_with_target - r_squared_without_target
+
+            return usefullness
+
+    def compute_shapley(self, target_pred=2):
+        """Compute shapley value using target_pred as the indice
+        of the predictor of interest.
+
+        Parameters
+        ----------
+        target_pred : int
+            index of the predictor of interest of the shapley value
+            to be computed, by default 2
+
+        Returns
+        -------
+        shapley_val : float
+            shapley value computed from the differents coalitions
+            of predictors that contain "target_pred".
+
+        Raises
+        ------
+        ValueError
+            if list_r_squared is None.
+        ValueError
+            if target_pred is not in self.ind_predictors_selected.
+        """
+
+        num_predictors = self.num_feat_selec
+        predictors = self.ind_predictors_selected
+        if self.list_r_squared is None:
+            raise ValueError("list_r_squared cannot be None.")
+        if target_pred not in self.ind_predictors_selected:
+            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" + \
+                              """target_pred must be in predictors.""")
+        # Initializing shapley value to 0.0.
+        shapley_val = 0
+        npfactor = np.math.factorial
+        # First, second, third etc... term
+        for len_comb in range(0, num_predictors + 1):
+            sum_usefullness = 0
+            # Trick to shift weigths correctly.
+            # For 0 length coalition, we enforce weight = 0 and then,
+            # for the remaining terms we compute the weigths by shifting backward
+            # len_comb.
+            if len_comb == 0:
+                weight = 0
+            else:
+                len_comb_int = len_comb - 1
+                weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
+
+            for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
+                usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
+                sum_usefullness = sum_usefullness + usefullness
+            shapley_val = shapley_val + weight * sum_usefullness
+        return shapley_val
+
+    def fit(self):
+        """Compute the coefficients of regression ajusted
+        using Shapley Values.
+
+        Returns
+        -------
+        self.coeffs: numpy array of shape (self.num_feat_selec + 1,)
+            The first element of self.coeffs is the intercept term
+            in the unnormalized basis.
+            The remaining elements are the coefficients of regressions for each predictor.
+        """
+
+        target = self.y_targets_norm.ravel()
+
+        for ind_feat in range(0, self.num_feat_selec):
+            self.coeffs[ind_feat] = self.compute_shapley(target_pred=ind_feat)
+            # Normalizing the shapley value with the correlation coefficient between
+            # the current feature and the target.
+            curr_feat = self.x_features_norm[:, ind_feat]
+            # TODO: take the p-value into account to test the significance
+            # of the correlation.
+            corr = pearsonr(curr_feat, target).statistic
+            self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
+
+        # Unnormalize coefficients of the Shapley Value regression.
+        self._unnormalize_coeffs()
+
+        return self.coeffs
+
+    def _unnormalize_coeffs(self):
+        """Unnormalize the coefficients of regressions
+        for each selected predictors.
+        Compute as well the intercept term
+        in the unnormalized basis.
+
+        Returns
+        -------
+        self.coeffs: numpy array of shape (self.num_feat_selec + 1,)
+            The first element of self.coeffs is the intercept term
+            in the unnormalized basis.
+            The remaining elements are the coefficients of regressions for each predictor.
+        """
+        means_x = self._scaler_x.mean_
+        means_y = self._scaler_y.mean_
+
+        stds_x = np.sqrt(self._scaler_x.var_)
+        stds_y = np.sqrt(self._scaler_y.var_)
+
+        self.coeffs = (self.coeffs * stds_y)/ stds_x
+        offset = means_y - ((means_x * stds_y )/ stds_x).sum()
+
+        self.coeffs = np.concatenate((offset, self.coeffs))
+
+        return self.coeffs
+
+    def check_norm_shap(self):
+        """Compute both R^2 of the full model (all predictors)
+        and the sum of shapley values.
+        The two should be equal in the normalized basis
+        (see eq. 19 of the paper cited in module docstring).
+
+        Returns
+        -------
+        Python dictionnary
+            Contains the R^2 of the full model (r_squared_full)
+            and the sum of shapley values (sum_shaps)
+
+        Raises
+        ------
+        ValueError
+            if list_r_squared is None.
+        """
+
+        if self.list_r_squared is None:
+            raise ValueError("list_r_squared cannot be None.")
+        lin_reg_fit = self.lin_reg.fit(self.x_features_norm, self.y_targets_norm)
+        r_squared_full = lin_reg_fit.score(self.x_features_norm, self.y_targets_norm)
+
+        sum_shap = 0.0
+        predictors = self.ind_predictors_selected
+        for ind_feat in predictors:
+            shap = self.compute_shapley(target_pred=ind_feat)
+            sum_shap = sum_shap + shap
+        return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
 
-# Testing:
-# Dataset path.
-dataset = "data/base_test_sv_reg_working.csv"
-sv_reg = SvRegression(data=dataset,
-                      target="qlead_auto")
+if __name__ == "__main__":
 
-x_features_norm, y_target_norm = sv_reg.normalize()
+    # Testing:
+    # Dataset path.
+    DATASET = "data/base_test_sv_reg_working.csv"
 
-dum_num = 5
-dum_predictors = list(range(dum_num))
-x_features_norm_dum = x_features_norm[:, dum_predictors]
-
-# declaring model.
-lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
-def get_rsquared_sk(ind=None):
-    if ind == 0:
-        return 0.0
-    else:
-        # TODO: find a way to format the format code dynamically (e.g replace '5' by dum_num at runtime).
-        ind_bin = f"{ind:05b}"
-        dum_mask = [bool(int(ind_f)) for ind_f in ind_bin[::-1]]
-        x_features_curr = x_features_norm_dum[:, dum_mask]
-        lin_reg.fit(x_features_curr, y_target_norm)
-        return lin_reg.score(x_features_curr, y_target_norm)
-
-# Activate GPU acceleration.
-# Problem: requires dpctl to work:
-# https://pypi.org/project/dpctl/
-
-# I had an issue installing dpctl, turning off for now.
-# with config_context(target_offload="gpu:0"):
-
-# r_squared_dum_compr is defined as a global variable to avoid memory overload.
-start = timer()
-r_squared_dum_compr = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
-time_comp = timer() - start
-
-# Comptue usefullness as defined by formulae 18 from the article.
-# We do not pass r_squared_dum_compr (set it globally) as a parameter to avoid memory overload.
-def compute_usefullness(predictors=None, target=2, len_predictors=4):
-
-    if len(predictors) == 1:
-        # Rsquared corresponding to length 1 predictors:
-        bin_predictors = [1 if x in predictors else 0 for x in range(len_predictors)]
-        ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
-
-        r_squared = r_squared_dum_compr[ind_rsquared]
-
-        return r_squared
-
-    else:
-        # Rsquared with target:
-        bin_predictors = [1 if x in predictors else 0 for x in range(len_predictors)]
-        ind_rsquared = int("".join(str(x) for x in bin_predictors), 2)
-        r_squared_with_target = r_squared_dum_compr[ind_rsquared]
-
-        # Rsquared without target:
-        # predictors.remove(target)  # bad idea to use list.remove() --> add side effects to the function.
-        predictors = [x for x in predictors if x is not target]
-        bin_predictors_without_target = [1 if x in predictors else 0 for x in range(len_predictors)]
-        ind_rsquared_without_target = int("".join(str(x) for x in bin_predictors_without_target), 2)
-        r_squared_with_target_without_target = r_squared_dum_compr[ind_rsquared_without_target]
-
-        return r_squared_with_target - r_squared_with_target_without_target
+    sv_reg = SvRegression(data=DATASET,
+                        ind_predictors_selected=list(range(5)),
+                        target="qlead_auto")
 
 
-def compute_shapley(target_pred=None, predictors=None):
-    if target_pred not in predictors:
-        raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" +
-                          """target_pred must be in predictors.""")
-    num_predictors = len(predictors)
-    shapley_val = 0
-# First, second, third etc... term
-    for len_comb in range(num_predictors):
-        sum_usefullness = 0
-        weight = (np.math.factorial(len_comb) * np.math.factorial(num_predictors - len_comb - 1)) / np.math.factorial(num_predictors)
-        # Checking that the weigths are correct (see eq. 17).
-        # ic(len_comb)
-        # ic(weight)
-        # input("waiting\n")
-        # The weights are correct...
-        for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
-            usefullness = compute_usefullness(predictors=coalition,
-                                              target=target_pred,
-                                              len_predictors=len(predictors))
-            sum_usefullness = sum_usefullness + usefullness
-        shapley_val = shapley_val + weight * sum_usefullness
+    coeffs = sv_reg.fit()
+    ic(sv_reg.coeffs)
 
-    return shapley_val
+    # sv_reg.unnormalize_coeffs()
 
-# Testing that the sum of Shapley values is equal to the complete r_squared.
+    # feat_norm, tar_norm = sv_reg.normalize()
+    # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
 
-# Just to make sure we are using the correct predictors
-x_features_norm_dum_test = x_features_norm[:, dum_predictors]
-
-r_squared_full = lin_reg.fit(x_features_norm_dum_test, y_target_norm).score(x_features_norm_dum_test, y_target_norm)
-
-sum_shap = 0.0
-
-for ind_feat in dum_predictors:
-
-    shap = compute_shapley(target_pred=ind_feat, predictors=dum_predictors)
-    sum_shap = sum_shap + shap
-
-ic(r_squared_full)
-ic(sum_shap)
+    # Test check_norm works !
+    # check_norm = sv_reg.check_norm_shap()
+    # ic(check_norm)
 
 
+    # Activate GPU acceleration.
+    # Problem: requires dpctl to work:
+    # https://pypi.org/project/dpctl/
 
+    # I had an issue installing dpctl, turning off for now.
+    # with config_context(target_offload="gpu:0"):
 
-
-
-
-
+    # list_r_squared is defined as a global variable to avoid memory overload.
+    # start = timer()
+    # list_r_squared = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
+    # time_comp = timer() - start

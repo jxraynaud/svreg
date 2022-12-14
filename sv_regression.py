@@ -4,9 +4,9 @@ import pandas as pd
 from itertools import chain, combinations
 from timeit import default_timer as timer
 from icecream import ic
-# from sklearnex import patch_sklearn, config_context
+from sklearnex import patch_sklearn, config_context
 
-# patch_sklearn()
+patch_sklearn()
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 

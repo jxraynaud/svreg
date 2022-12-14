@@ -75,8 +75,11 @@ class SvRegression:
         # Defining a linear regression object to compute r_squared.
         self.lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
 
-        # empty list
+        # empty list.
         self._list_r_squared = None
+
+        # initializing coefficients array.
+        self.coeffs = np.zeros(self.num_feat_selec)
 
     @property
     def data_sv(self):
@@ -254,13 +257,19 @@ class SvRegression:
                               """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
+        npfactor = np.math.factorial
         # First, second, third etc... term
         for len_comb in range(0, num_predictors + 1):
             sum_usefullness = 0
+            # Trick to shift weigths correctly.
+            # For 0 length coalition, we enforce weight = 0 and then,
+            # for the remaining terms we compute the weigths by shifting backward
+            # len_comb.
             if len_comb == 0:
                 weight = 0
             else:
-                weight = self.get_weights(len_comb_int=len_comb, num_predictors=num_predictors)
+                len_comb_int = len_comb - 1
+                weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
 
             for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
                 usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
@@ -268,40 +277,59 @@ class SvRegression:
             shapley_val = shapley_val + weight * sum_usefullness
         return shapley_val
 
-    def get_weights(self, len_comb_int=0, num_predictors=0):
-        npfactor = np.math.factorial
-        len_comb_int = len_comb_int - 1
-        weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
-        return weight
-
     def fit(self):
         """Compute the coefficients of regression ajusted
         using Shapley Values.
 
         Returns
         -------
-        coeffs: numpy array of shape (self.num_feat_selec,)
-            Coefficients of regressions for each predictor.
+        self.coeffs: numpy array of shape (self.num_feat_selec + 1,)
+            The first element of self.coeffs is the intercept term
+            in the unnormalized basis.
+            The remaining elements are the coefficients of regressions for each predictor.
         """
 
-        coeffs = np.zeros(self.num_feat_selec)
         target = self.y_targets_norm.ravel()
 
         for ind_feat in range(0, self.num_feat_selec):
-            coeffs[ind_feat] = self.compute_shapley(target_pred=ind_feat)
+            self.coeffs[ind_feat] = self.compute_shapley(target_pred=ind_feat)
             # Normalizing the shapley value with the correlation coefficient between
             # the current feature and the target.
             curr_feat = self.x_features_norm[:, ind_feat]
             # TODO: take the p-value into account to test the significance
             # of the correlation.
             corr = pearsonr(curr_feat, target).statistic
-            coeffs[ind_feat] = coeffs[ind_feat] / corr
-        return coeffs
+            self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
+        self._unnormalize_coeffs()
+
+        return self.coeffs
+
+    def _unnormalize_coeffs(self):
+        """Unnormalize the coefficients of regressions
+        for each selected predictors.
+        Compute as well the intercept term
+        in the unnormalized basis.
+
+        Returns
+        -------
+        self.coeffs: numpy array of shape (self.num_feat_selec + 1,)
+            The first element of self.coeffs is the intercept term
+            in the unnormalized basis.
+            The remaining elements are the coefficients of regressions for each predictor.
+        """
+        means = self._scaler_x.mean_
+        stds = np.sqrt(self._scaler_x.var_)
+        offset = - (means / stds).sum()
+        self.coeffs = self.coeffs / stds
+
+        self.coeffs = np.concatenate(([offset], self.coeffs))
+
+        return self.coeffs
 
     def check_norm_shap(self):
         """Compute both R^2 of the full model (all predictors)
         and the sum of shapley values.
-        The two should be equal more or less numerical errors
+        The two should be equal in the normalized basis
         (see eq. 19 of the paper cited in module docstring).
 
         Returns
@@ -337,8 +365,11 @@ sv_reg = SvRegression(data=DATASET,
                       ind_predictors_selected=list(range(5)),
                       target="qlead_auto")
 
+
 coeffs = sv_reg.fit()
-ic(coeffs)
+ic(sv_reg.coeffs)
+
+# sv_reg.unnormalize_coeffs()
 
 # feat_norm, tar_norm = sv_reg.normalize()
 # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)

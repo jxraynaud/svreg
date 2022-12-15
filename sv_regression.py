@@ -255,11 +255,14 @@ class SvRegression:
 
         num_predictors = self.num_feat_selec
         predictors = self.ind_predictors_selected
+        feat = predictors[ind_feat]
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
-        if ind_feat not in self.ind_predictors_selected:
-            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{ind_feat}\n""" + \
-                              """target_pred must be in predictors.""")
+        # Commenting for now.
+        # TODO: find a clever way to raise this error.
+        # if ind_feat not in self.ind_predictors_selected:
+        #     raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{ind_feat}\n""" + \
+        #                       """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
         npfactor = np.math.factorial
@@ -276,8 +279,8 @@ class SvRegression:
                 len_comb_int = len_comb - 1
                 weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
 
-            for coalition in filter(lambda x: ind_feat in x, combinations(predictors, len_comb)):
-                usefullness = self.compute_usefullness(coalition=coalition, target=ind_feat)
+            for coalition in filter(lambda x: feat in x, combinations(predictors, len_comb)):
+                usefullness = self.compute_usefullness(coalition=coalition, target=feat)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
         return shapley_val
@@ -372,10 +375,14 @@ if __name__ == "__main__":
 
     # Testing:
     # Dataset path.
+    # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
+    # should take approximately 24-26 hours.
     DATASET = "data/base_test_sv_reg_working.csv"
 
     sv_reg = SvRegression(data=DATASET,
-                          ind_predictors_selected=list(range(5)),
+                          ind_predictors_selected=list(range(17)),
+                          #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
+                          #ind_predictors_selected=[0, 1, 2, 3, 4],
                           target="qlead_auto")
 
 

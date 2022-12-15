@@ -1,5 +1,6 @@
 from sv_regression_api import SvRegression, LinearRegression, StandardScaler
 from unittest import TestCase
+import pytest
 
 class TryTesting(TestCase):
     def test_init(self):
@@ -9,11 +10,8 @@ class TryTesting(TestCase):
 
     def test_init_2(self):
         dataset = "data/base_test_sv_reg_working.csv"
-        try:
+        with pytest.raises(ValueError):
             sv_reg = SvRegression(data=dataset, target="invalid_target")
-            self.assertTrue(False)
-        except:
-            self.assertTrue(True)  
 
     def test_normalize(self):
         dataset = "data/base_test_sv_reg_working.csv"
@@ -40,51 +38,31 @@ class TryTesting(TestCase):
         rsquared = sv_reg._get_rsquared_sk(0)
         self.assertEqual(rsquared, 0)
 
-
-    def test_fit_5_features(self):
-        dataset = "data/base_test_sv_reg_working.csv"
-        sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4])
-        values = [0.04115089, 0.77510499, 0.21830721, 0.08091167, 0.96657913]
-        fit = sv_reg.fit()
-        for i in range(len(values)):
-            if round (fit[i], 3) != round(values[i], 3):
-                self.assertEqual(round (fit[i], 3), round(values[i], 3))    
-        self.assertTrue(True)
-
-    def test_fit_10_features(self):
-        dataset = "data/base_test_sv_reg_working.csv"
-        sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        values = [0.11084141, 0.16932976, 0.03767706, 0.08262286, 0.07923011, 0.05066642, 0.39426036, 0.18698367, 0.11121645, 0.3680613]
-        fit = sv_reg.fit()
-        for i in range(len(values)):
-            if round (fit[i], 3) != round(values[i], 3):
-                self.assertEqual(round (fit[i], 3), round(values[i], 3))    
-        self.assertTrue(True)   
-
     def test_compute_shapley_incorrect_target(self):
         dataset = "data/base_test_sv_reg_working.csv"
-        sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4])   
-        try:
+        sv_reg = SvRegression(data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2, 3, 4])   
+        with pytest.raises(ValueError):
             shapley = sv_reg.compute_shapley(target_pred=6)
-            self.assertTrue(False)
-        except:
-            self.assertTrue(True)   
 
 
     def test_compute_shapley_1_feature(self):
         dataset = "data/base_test_sv_reg_working.csv"
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0])
         shapley = sv_reg.compute_shapley(target_pred=0)
-        self.assertEqual(round(shapley, 3), 0.733)  
+        self.assertEqual(shapley, 0)  
 
     def test_compute_shapley_5_features(self):
         dataset = "data/base_test_sv_reg_working.csv"
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4])
         shapley = sv_reg.compute_shapley()
-        self.assertEqual(round(shapley, 3), 0.128)
+        self.assertEqual(round(shapley, 3), 0.09)
 
     def test_compute_shapley_10_features(self):
         dataset = "data/base_test_sv_reg_working.csv"
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         shapley = sv_reg.compute_shapley()
-        self.assertEqual(round(shapley, 3), 0.022)
+        self.assertEqual(round(shapley, 3), 0.007)
+
+if __name__ == '__main__':
+    dataset = "data/base_test_sv_reg_working.csv"
+    sv_reg = SvRegression(data=dataset, target="invalid_target")

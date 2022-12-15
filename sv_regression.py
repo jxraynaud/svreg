@@ -16,7 +16,6 @@ from alive_progress import alive_bar
 from icecream import ic
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
-
 patch_sklearn()
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
@@ -230,13 +229,13 @@ class SvRegression:
 
             return usefullness
 
-    def compute_shapley(self, target_pred=2):
+    def compute_shapley(self, ind_feat=2):
         """Compute shapley value using target_pred as the indice
         of the predictor of interest.
 
         Parameters
         ----------
-        target_pred : int
+        ind_feat : int
             index of the predictor of interest of the shapley value
             to be computed, by default 2
 
@@ -258,8 +257,8 @@ class SvRegression:
         predictors = self.ind_predictors_selected
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
-        if target_pred not in self.ind_predictors_selected:
-            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{target_pred}\n""" + \
+        if ind_feat not in self.ind_predictors_selected:
+            raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{ind_feat}\n""" + \
                               """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
@@ -277,8 +276,8 @@ class SvRegression:
                 len_comb_int = len_comb - 1
                 weight = (npfactor(len_comb_int) * npfactor(num_predictors - len_comb_int - 1)) / npfactor(num_predictors)
 
-            for coalition in filter(lambda x: target_pred in x, combinations(predictors, len_comb)):
-                usefullness = self.compute_usefullness(coalition=coalition, target=target_pred)
+            for coalition in filter(lambda x: ind_feat in x, combinations(predictors, len_comb)):
+                usefullness = self.compute_usefullness(coalition=coalition, target=ind_feat)
                 sum_usefullness = sum_usefullness + usefullness
             shapley_val = shapley_val + weight * sum_usefullness
         return shapley_val
@@ -298,7 +297,7 @@ class SvRegression:
         target = self.y_targets_norm.ravel()
 
         for ind_feat in range(0, self.num_feat_selec):
-            self.coeffs[ind_feat] = self.compute_shapley(target_pred=ind_feat)
+            self.coeffs[ind_feat] = self.compute_shapley(ind_feat=ind_feat)
             # Normalizing the shapley value with the correlation coefficient between
             # the current feature and the target.
             curr_feat = self.x_features_norm[:, ind_feat]
@@ -364,7 +363,7 @@ class SvRegression:
         sum_shap = 0.0
         predictors = self.ind_predictors_selected
         for ind_feat in predictors:
-            shap = self.compute_shapley(target_pred=ind_feat)
+            shap = self.compute_shapley(ind_feat=ind_feat)
             sum_shap = sum_shap + shap
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
@@ -376,8 +375,8 @@ if __name__ == "__main__":
     DATASET = "data/base_test_sv_reg_working.csv"
 
     sv_reg = SvRegression(data=DATASET,
-                        ind_predictors_selected=list(range(5)),
-                        target="qlead_auto")
+                          ind_predictors_selected=list(range(5)),
+                          target="qlead_auto")
 
 
     coeffs = sv_reg.fit()

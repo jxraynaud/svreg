@@ -31,22 +31,12 @@ class TryTesting(TestCase):
     def test_get_rsquared(self):
         dataset = "data/base_test_sv_reg_working.csv"
         sv_reg = SvRegression(data=dataset, target="qlead_auto")
-        x_features_norm, y_target_norm = sv_reg.normalize()
-        dum_num = 5
-        dum_predictors = list(range(dum_num))
-        x_features_norm_dum = x_features_norm[:, dum_predictors]
-        lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
         rsquared = sv_reg._get_rsquared_sk(sv_reg.num_feat_selec)
-        self.assertEqual(rsquared, 0.8848637227130571) 
+        self.assertEqual(round(rsquared, 3), 0.885) 
         
     def test_get_rsquared_2(self): 
         dataset = "data/base_test_sv_reg_working.csv"
         sv_reg = SvRegression(data=dataset, target="qlead_auto")
-        x_features_norm, y_target_norm = sv_reg.normalize()
-        dum_num = 5
-        dum_predictors = list(range(dum_num))
-        x_features_norm_dum = x_features_norm[:, dum_predictors]
-        lin_reg = LinearRegression(n_jobs=-1, copy_X=False)
         rsquared = sv_reg._get_rsquared_sk(0)
         self.assertEqual(rsquared, 0)
 

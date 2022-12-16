@@ -77,8 +77,13 @@ class SvRegression:
         # empty list.
         self._list_r_squared = None
 
-        # initializing coefficients array.
+        # initializing coefficients array (unnormalized regressions coeffs).
         self.coeffs = np.zeros(self.num_feat_selec)
+        # initializing coefficients array (normalized regressions coeffs).
+        self.coeffs_norm = np.zeros(self.num_feat_selec)
+        # initializing Shapley values array (normalized basis).
+        self.shaps = np.zeros(self.num_feat_selec)
+
 
     @property
     def data_sv(self):
@@ -300,7 +305,9 @@ class SvRegression:
         target = self.y_targets_norm.ravel()
 
         for ind_feat in range(0, self.num_feat_selec):
-            self.coeffs[ind_feat] = self.compute_shapley(ind_feat=ind_feat)
+            curr_shap = self.compute_shapley(ind_feat=ind_feat)
+            self.coeffs[ind_feat] = curr_shap
+            self.shaps[ind_feat] = curr_shap
             # Normalizing the shapley value with the correlation coefficient between
             # the current feature and the target.
             curr_feat = self.x_features_norm[:, ind_feat]
@@ -309,6 +316,8 @@ class SvRegression:
             corr = pearsonr(curr_feat, target).statistic
             self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
 
+        # Saving unnormalized coefficients:
+        self.coeffs_norm = np.copy(self.coeffs)
         # Unnormalize coefficients of the Shapley Value regression.
         self._unnormalize_coeffs()
 
@@ -380,16 +389,21 @@ if __name__ == "__main__":
     DATASET = "data/base_test_sv_reg_working.csv"
 
     sv_reg = SvRegression(data=DATASET,
-                          ind_predictors_selected=list(range(17)),
+                          ind_predictors_selected=list(range(5)),
                           #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
                           #ind_predictors_selected=[0, 1, 2, 3, 4],
                           target="qlead_auto")
 
-
+    # Fitting the regression.
     coeffs = sv_reg.fit()
-    ic(sv_reg.coeffs)
 
-    # sv_reg.unnormalize_coeffs()
+    # Per predictor Shapley value (normalized basis).
+    ic(sv_reg.shaps)
+    # Coefficients of the SV regression (normalized basis).
+    ic(sv_reg.coeffs_norm)
+    # Coefficients of the SV regression (unnormalized basis).
+    # sv_reg.coeffs[0] --> intercept term.
+    ic(sv_reg.coeffs)
 
     # feat_norm, tar_norm = sv_reg.normalize()
     # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
@@ -398,15 +412,9 @@ if __name__ == "__main__":
     # check_norm = sv_reg.check_norm_shap()
     # ic(check_norm)
 
-
     # Activate GPU acceleration.
     # Problem: requires dpctl to work:
     # https://pypi.org/project/dpctl/
 
     # I had an issue installing dpctl, turning off for now.
     # with config_context(target_offload="gpu:0"):
-
-    # list_r_squared is defined as a global variable to avoid memory overload.
-    # start = timer()
-    # list_r_squared = [get_rsquared_sk(ind) for ind in range(0, 2**dum_num)]
-    # time_comp = timer() - start

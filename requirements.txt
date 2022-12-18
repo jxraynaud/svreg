@@ -7,7 +7,7 @@ pandas
 scikit-learn-intelex
 scikit-learn==1.0.1
 daal4py>=2021.6.0
-daal>=2021.7.0
+daal==2021.7.0
 numpy>=1.15
 tbb==2021.*
 joblib>=1.1.1

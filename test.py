@@ -1,4 +1,4 @@
-from sv_regression import SvRegression, LinearRegression, StandardScaler
+from sv_regression import SvRegression
 import pytest
 
 def test_init():
@@ -9,12 +9,12 @@ def test_init():
 def test_init_2():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
-        sv_reg = SvRegression(data=dataset, target="invalid_target")
+        _ = SvRegression(data=dataset, target="invalid_target")
 
 def test_normalize():
     dataset = "data/base_test_sv_reg_working.csv"
     sv_reg = SvRegression(data=dataset, target="qlead_auto")
-    x_features_norm, y_target_norm = sv_reg.normalize()
+    x_features_norm, _ = sv_reg.normalize()
     assert x_features_norm.shape == (643, 27)
 
 
@@ -22,7 +22,7 @@ def test_unnormalize():
     dataset = "data/base_test_sv_reg_working.csv"
     sv_reg = SvRegression(data=dataset, target="qlead_auto")
     x_features_norm, y_target_norm = sv_reg.normalize()
-    x_features, y_target = sv_reg.unnormalize(x_features_norm, y_target_norm)
+    x_features, _ = sv_reg.unnormalize(x_features_norm, y_target_norm)
     assert x_features.shape == (643, 27)
 
 def test_get_rsquared():
@@ -41,7 +41,7 @@ def test_compute_shapley_incorrect_target():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2, 3, 4])
-        shapley = sv_reg.compute_shapley(ind_feat=6)
+        _ = sv_reg.compute_shapley(ind_feat=6)
 
 def test_compute_shapley_1_feature(cache_compute_1_feature):
     shapley = cache_compute_1_feature
@@ -51,27 +51,18 @@ def test_compute_shapley_5_features(cache_compute_5_features):
     shapley = cache_compute_5_features
     assert round(shapley, 3) == 0.022
 
-def test_compute_shapley_10_features(cache_compute_10_features):
-    shapley = cache_compute_10_features
-    assert round(shapley, 3) == 0.022
-
-def test_compute_shapley_15_features(cache_compute_15_features):
-    shapley = cache_compute_15_features
-    assert round(shapley, 3) == 0.132
-
-
 def test_compute_shapley_none():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[])
-        shapley = sv_reg.compute_shapley()
+        _ = sv_reg.compute_shapley()
 
 def test_compute_shapley_incorrect():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0])
         sv_reg._list_r_squared = None
-        shapley = sv_reg.compute_shapley(ind_feat=5)
+        _ = sv_reg.compute_shapley(ind_feat=5)
 
 def test_check_norm_shap(cache_norm_shap):
     test_dict = cache_norm_shap

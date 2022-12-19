@@ -70,20 +70,20 @@ def test_check_norm_shap(cache_norm_shap):
 
 def test_data_sv():
     dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4])
+    sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2])
     data = sv_reg.data_sv
     assert data.shape == (643, 28)
 
 def test_fit():
     dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2, 3, 4])
+    sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2])
     sv_reg.fit()
     assert sv_reg.x_features.shape == (643, 5)
 
 def test_fit_incorrect():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
-        sv_reg = SvRegression(data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2, 3, 4, 5])
+        sv_reg = SvRegression(data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2])
         sv_reg.fit()
 
 def test_fit_incorrect_2():

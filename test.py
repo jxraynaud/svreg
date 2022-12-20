@@ -6,7 +6,7 @@ def test_init():
     sv_reg = SvRegression(data=dataset, target="qlead_auto")
     assert sv_reg.x_features.shape == (643, 27)
 
-def test_init_2():
+def test_init_invalid():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         _ = SvRegression(data=dataset, target="invalid_target")
@@ -31,7 +31,7 @@ def test_get_rsquared():
     rsquared = sv_reg._get_rsquared_sk(sv_reg.num_feat_selec)
     assert round(rsquared, 3) == 0.885
 
-def test_get_rsquared_2():
+def test_get_rsquared_ind_0():
     dataset = "data/base_test_sv_reg_working.csv"
     sv_reg = SvRegression(data=dataset, target="qlead_auto")
     rsquared = sv_reg._get_rsquared_sk(0)
@@ -78,15 +78,15 @@ def test_fit():
     dataset = "data/base_test_sv_reg_working.csv"
     sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2])
     sv_reg.fit()
-    assert sv_reg.x_features.shape == (643, 5)
+    assert sv_reg.x_features.shape == (643, 3)
 
-def test_fit_incorrect():
+def test_fit_incorrect_target():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2])
         sv_reg.fit()
 
-def test_fit_incorrect_2():
+def test_fit_incorrect_ind():
     dataset = "data/base_test_sv_reg_working.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(data=dataset, target="qlead_auto", ind_predictors_selected=[])

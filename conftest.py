@@ -1,5 +1,5 @@
 import pytest
-from sv_regression import SvRegression
+from svReg import SvRegression
 
 @pytest.fixture
 def cache_compute_1_feature(request):

@@ -21,5 +21,5 @@ pip install sv_regression
 ## Usage
 
 ```python
-from sv_regression import SvRegression
+from svReg import SvRegression
 ```

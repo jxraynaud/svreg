@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler
 
 # from typing import Tuple
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 class SvRegression:
     """This class performs linear regression using Shapley Values from game theory.

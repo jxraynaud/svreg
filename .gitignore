@@ -53,3 +53,6 @@ Thumbs.db
 
 # data_exploration.ipynb
 data_exploration.ipynb
+
+# profiling data
+profile_stats/

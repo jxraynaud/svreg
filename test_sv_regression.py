@@ -1,6 +1,6 @@
 import pytest
 
-from svReg import SvRegression
+from sv_regression import SvRegression
 
 
 def test_init():

@@ -1,5 +1,5 @@
 import pytest
-from svReg import SvRegression
+from sv_regression import SvRegression
 
 @pytest.fixture
 def cache_compute_1_feature(request):
@@ -20,7 +20,7 @@ def cache_compute_5_features(request):
         shapley = sv_reg.compute_shapley()
         request.config.cache.set("shapley_2", shapley)
     return shapley
-    
+
 @pytest.fixture
 def cache_norm_shap(request):
     dataset = "data/base_test_sv_reg_working.csv"

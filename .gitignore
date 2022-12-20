@@ -51,8 +51,12 @@ Thumbs.db
 # Vscode
 .vscode/
 
-# tox 
+# tox
 .tox/
 data.egg-info/
+
 # coverage
 .coverage
+
+# Profiling data
+profile_stats/

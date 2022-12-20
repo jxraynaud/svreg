@@ -1,5 +1,7 @@
-from svReg import SvRegression
 import pytest
+
+from svReg import SvRegression
+
 
 def test_init():
     dataset = "data/base_test_sv_reg_working.csv"

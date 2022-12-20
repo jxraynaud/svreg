@@ -1,18 +1,13 @@
 ### svReg
 
-Test package
-
-| Function | Description                                    |
-|----------|------------------------------------------------|
-| progress | A function that makes a progression of a loop  |
-| logger   | A decorator who makes the history of functions |
+An utility to perform Regression using Shapley Values from Game Theory.
 
 ----
 
 ## Installation
 
 ```bash
-pip install my_minipack
+pip install sv_regression
 ```
 
 ---

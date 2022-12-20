@@ -7,3 +7,10 @@ name = "svReg"
 authors = [{name = "Yannick Stoll, Elidjah Maugalem", email = "yannick@pixelforest.io"}]
 readme = "README.md"
 dynamic = ["version", "description"]
+
+
+[tool.pytest.ini_options]
+filterwarnings = [
+# Ignoring DeprecationWarning for now...
+    "ignore::DeprecationWarning"
+]

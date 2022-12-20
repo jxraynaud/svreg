@@ -10,8 +10,6 @@ An utility to perform Regression using Shapley Values from Game Theory.
 pip install -i https://test.pypi.org/simple/ sv_regression
 ```
 
-# do a table of contents
-
 | Function  | Description  |
 | :------------- |:-----------------------------------------------------------------------------------|
 | list_r_squared | Contains the R^2 of regressions computed from the differents coalitions of features

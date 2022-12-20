@@ -7,7 +7,7 @@ An utility to perform Regression using Shapley Values from Game Theory.
 ## Installation
 
 ```bash
-pip install -i https://test.pypi.org/simple/ svReg
+pip install -i https://test.pypi.org/simple/ sv_regression
 ```
 
 # do a table of contents
@@ -32,7 +32,7 @@ pip install -i https://test.pypi.org/simple/ svReg
 ## Usage
 
 ```python
-from svReg import SvRegression
+from sv_regression import SvRegression
 ```
 
 ### Changelog 

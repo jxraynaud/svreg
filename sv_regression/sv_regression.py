@@ -13,7 +13,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from alive_progress import alive_bar
-from icecream import ic
+# from icecream import ic
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
 patch_sklearn()
@@ -38,7 +38,7 @@ class SvRegression:
     ):
 
         self._data_sv = pd.read_csv(data, index_col="date", parse_dates=True, infer_datetime_format=True)
-        # Check that target is indeed in the dataset. 
+        # Check that target is indeed in the dataset.
         if target not in self._data_sv.columns:
             raise ValueError(f"{target} not in the dataset.")
 
@@ -398,24 +398,24 @@ class SvRegression:
         plt.ylabel("Shapley values")
         plt.title("Histogram of Shapley values")
         plt.show()
-        
-# if __name__ == "__main__":
 
-#     # Testing:
-#     # Dataset path.
-#     # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
-#     # should take approximately 24-26 hours.
-    # DATASET = "data/base_test_sv_reg_working.csv"
+if __name__ == "__main__":
 
-    # sv_reg = SvRegression(data=DATASET,
-                        #   ind_predictors_selected=list(range(5)),
+    # Testing:
+    # Dataset path.
+    # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
+    # should take approximately 24-26 hours.
+    DATASET = "data/base_test_sv_reg_working.csv"
+
+    sv_reg = SvRegression(data=DATASET,
+                          ind_predictors_selected=list(range(5)),
                           #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
                           #ind_predictors_selected=[0, 1, 2, 3, 4],
-                        #   target="qlead_auto")
+                          target="qlead_auto")
 
     # Fitting the regression.
-    # coeffs = sv_reg.fit()
-    # sv_reg.histo_shaps()
+    coeffs = sv_reg.fit()
+    sv_reg.histo_shaps()
 #     # Per predictor Shapley value (normalized basis).
 #     # ic(sv_reg.shaps)
 #     # Coefficients of the SV regression (normalized basis).

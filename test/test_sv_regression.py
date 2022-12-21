@@ -1,6 +1,6 @@
 import pytest
 
-from sv_regression import SvRegression
+from sv_regression.sv_regression import SvRegression
 
 
 def test_init():
@@ -60,7 +60,7 @@ def test_compute_shapley_1_feature(cache_compute_1_feature):
 
 def test_compute_shapley_5_features(cache_compute_5_features):
     shapley = cache_compute_5_features
-    assert round(shapley, 3) == 0.128
+    assert round(shapley, 3) == 0.022
 
 
 def test_compute_shapley_none():
@@ -121,3 +121,4 @@ def test_fit_incorrect_ind():
             data=dataset, target="qlead_auto", ind_predictors_selected=[]
         )
         sv_reg.fit()
+

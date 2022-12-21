@@ -1,6 +1,5 @@
 import pytest
-from sv_regression import SvRegression
-
+from sv_regression.sv_regression import SvRegression
 
 @pytest.fixture
 def cache_compute_1_feature(request):
@@ -43,3 +42,4 @@ def cache_norm_shap(request):
         test_dict = sv_reg.check_norm_shap()
         request.config.cache.set("test_dict", test_dict)
     return test_dict
+

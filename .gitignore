@@ -60,3 +60,9 @@ data.egg-info/
 
 # Profiling data
 profile_stats/
+
+# Lock files
+.lock
+
+# Python venv
+.venv/

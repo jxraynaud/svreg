@@ -56,3 +56,9 @@ data_exploration.ipynb
 
 # profiling data
 profile_stats/
+
+# Lock files
+*.lock
+
+# Python venv
+.venv/

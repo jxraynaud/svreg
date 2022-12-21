@@ -60,7 +60,7 @@ def test_compute_shapley_1_feature(cache_compute_1_feature):
 
 def test_compute_shapley_5_features(cache_compute_5_features):
     shapley = cache_compute_5_features
-    assert round(shapley, 3) == 0.022
+    assert round(shapley, 3) == 0.128
 
 
 def test_compute_shapley_none():

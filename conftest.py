@@ -10,7 +10,7 @@ def cache_compute_1_feature(request):
         sv_reg = SvRegression(
             data=dataset,
             target="qlead_auto",
-            ind_predictors_selected=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            ind_predictors_selected=[0],
         )
         shapley = sv_reg.compute_shapley()
         request.config.cache.set("shapley_1", shapley)
@@ -25,7 +25,7 @@ def cache_compute_5_features(request):
         sv_reg = SvRegression(
             data=dataset,
             target="qlead_auto",
-            ind_predictors_selected=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            ind_predictors_selected=[0, 1, 2, 3, 4],
         )
         shapley = sv_reg.compute_shapley()
         request.config.cache.set("shapley_2", shapley)

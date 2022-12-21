@@ -19,6 +19,7 @@ from sklearnex import patch_sklearn
 patch_sklearn()
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 # from typing import Tuple
 
@@ -381,24 +382,40 @@ class SvRegression:
             sum_shap = sum_shap + shap
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
+    def histo_shaps(self):
+        """Plot the histogram of the shapley values.
 
+        Returns
+        -------
+        None
+        """
+        shaps = np.abs(self.shaps)
+        shaps = np.sort(shaps)
+        shaps = shaps[::-1]
+        plt.figure(figsize=(10, 5))
+        plt.bar(range(len(shaps)), shaps)
+        plt.xlabel("Features")
+        plt.ylabel("Shapley values")
+        plt.title("Histogram of Shapley values")
+        plt.show()
+        
 # if __name__ == "__main__":
 
 #     # Testing:
 #     # Dataset path.
 #     # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
 #     # should take approximately 24-26 hours.
-#     DATASET = "data/base_test_sv_reg_working.csv"
+    # DATASET = "data/base_test_sv_reg_working.csv"
 
-#     sv_reg = SvRegression(data=DATASET,
-#                           ind_predictors_selected=list(range(5)),
-#                           #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
-#                           #ind_predictors_selected=[0, 1, 2, 3, 4],
-#                           target="qlead_auto")
+    # sv_reg = SvRegression(data=DATASET,
+                        #   ind_predictors_selected=list(range(5)),
+                          #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
+                          #ind_predictors_selected=[0, 1, 2, 3, 4],
+                        #   target="qlead_auto")
 
-#     # Fitting the regression.
-#     coeffs = sv_reg.fit()
-
+    # Fitting the regression.
+    # coeffs = sv_reg.fit()
+    # sv_reg.histo_shaps()
 #     # Per predictor Shapley value (normalized basis).
 #     # ic(sv_reg.shaps)
 #     # Coefficients of the SV regression (normalized basis).

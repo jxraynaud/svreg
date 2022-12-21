@@ -408,14 +408,14 @@ if __name__ == "__main__":
     DATASET = "data/base_test_sv_reg_working.csv"
 
     sv_reg = SvRegression(data=DATASET,
-                          ind_predictors_selected=list(range(5)),
+                          ind_predictors_selected=list(range(10)),
                           #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
                           #ind_predictors_selected=[0, 1, 2, 3, 4],
                           target="qlead_auto")
 
     # Fitting the regression.
     coeffs = sv_reg.fit()
-    sv_reg.histo_shaps()
+    #sv_reg.histo_shaps()
 #     # Per predictor Shapley value (normalized basis).
 #     # ic(sv_reg.shaps)
 #     # Coefficients of the SV regression (normalized basis).

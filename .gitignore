@@ -61,4 +61,4 @@ profile_stats/
 *.lock
 
 # Python venv
-.venv/
+.venv*/

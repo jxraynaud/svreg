@@ -189,7 +189,7 @@ class SvRegression:
             self.lin_reg.fit(x_features_curr, self.y_targets_norm)
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
             # Update the progress bar after each linear regression computation.
-            # bar_()
+            bar_()
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):

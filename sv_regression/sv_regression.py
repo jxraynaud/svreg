@@ -13,7 +13,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from alive_progress import alive_bar
-# from icecream import ic
+from icecream import ic
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
 patch_sklearn()
@@ -32,12 +32,12 @@ class SvRegression:
 
     def __init__(
         self,
-        data=None,
+        data=None,  # Must be a dataframe or an array (not a path to a file).
         ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
         target=None,
     ):
 
-        self._data_sv = pd.read_csv(data, index_col="date", parse_dates=True, infer_datetime_format=True)
+        self._data_sv = data
         # Check that target is indeed in the dataset.
         if target not in self._data_sv.columns:
             raise ValueError(f"{target} not in the dataset.")
@@ -49,7 +49,7 @@ class SvRegression:
         n_rows_complete, n_cols = self._data_sv.shape
 
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
-        print(f"{n_rows_complete} rows in the dataset: {data}.")
+        print(f"{n_rows_complete} rows in the dataset.")
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
         # Initializing features and target.
@@ -402,40 +402,34 @@ class SvRegression:
 if __name__ == "__main__":
 
     # Testing:
-    # Dataset path.
-    # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
-    # should take approximately 24-26 hours.
-    DATASET = "data/base_test_sv_reg_working.csv"
+    DATASET = "data/mtcars.csv"
+    df_dataset = pd.read_csv(DATASET, index_col="model")
+    
 
-    sv_reg = SvRegression(data=DATASET,
+
+    sv_reg = SvRegression(data=df_dataset,
                           ind_predictors_selected=list(range(10)),
                           #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
                           #ind_predictors_selected=[0, 1, 2, 3, 4],
-                          target="qlead_auto")
+                          #target="qlead_auto"
+                          target="mpg"
+                          )
 
     # Fitting the regression.
     coeffs = sv_reg.fit()
+
+    print("="*70)
+    print("Per predictor Shapley value (normalized basis).")
+    print(sv_reg.shaps)
+    print("="*70)
+    print("Coefficients of the SV regression (normalized basis).")
+    print(sv_reg.coeffs_norm)
+    print("="*70)
+    print("Coefficients of the SV regression (unnormalized basis).")
+    print("sv_reg.coeffs[0] --> intercept term.")
+    print(sv_reg.coeffs)
+    print("="*70)
+    print("Checking that the Shapley Values sums up to the full model R^2.")
+    print(sv_reg.check_norm_shap())
+    print("="*70)
     #sv_reg.histo_shaps()
-#     # Per predictor Shapley value (normalized basis).
-#     # ic(sv_reg.shaps)
-#     # Coefficients of the SV regression (normalized basis).
-#     # ic(sv_reg.coeffs_norm)
-#     # Coefficients of the SV regression (unnormalized basis).
-#     # sv_reg.coeffs[0] --> intercept term.
-#     # ic(sv_reg.coeffs)
-
-#     ic(sv_reg.check_norm_shap())
-
-    # feat_norm, tar_norm = sv_reg.normalize()
-    # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
-
-    # Test check_norm works !
-    # check_norm = sv_reg.check_norm_shap()
-    # ic(check_norm)
-
-    # Activate GPU acceleration.
-    # Problem: requires dpctl to work:
-    # https://pypi.org/project/dpctl/
-
-    # I had an issue installing dpctl, turning off for now.
-    # with config_context(target_offload="gpu:0"):

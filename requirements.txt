@@ -9,6 +9,7 @@ scikit-learn==1.0.1
 numpy
 alive_progress
 dpcpp-cpp-rt
+pytest-cov
 
 # ==1.0.1
 # daal4py==2021.7.0

@@ -53,9 +53,17 @@ def test_compute_shapley_incorrect_target():
         _ = sv_reg.compute_shapley(ind_feat=6)
 
 
-def test_compute_shapley_1_feature(cache_compute_1_feature):
-    shapley = cache_compute_1_feature
-    assert round(shapley, 2) == 0.02
+def test_compute_shapley_1_feature():
+    with pytest.raises(AssertionError):
+        dataset = "data/base_test_sv_reg_working.csv"
+        sv_reg = SvRegression(
+            data=dataset,
+            target="qlead_auto",
+            ind_predictors_selected=[0],
+        )
+        _ = sv_reg.compute_shapley()
+
+
 
 
 def test_compute_shapley_5_features(cache_compute_5_features):
@@ -78,7 +86,7 @@ def test_compute_shapley_incorrect():
         data=dataset, target="mpg", ind_predictors_selected=[0]
     )
     sv_reg._list_r_squared = None
-    with pytest.raises(IndexError):
+    with pytest.raises(Exception):
         _ = sv_reg.compute_shapley(ind_feat=5)
 
 

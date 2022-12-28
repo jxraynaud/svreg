@@ -189,7 +189,7 @@ class SvRegression:
             self.lin_reg.fit(x_features_curr, self.y_targets_norm)
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
             # Update the progress bar after each linear regression computation.
-            bar_()
+            # bar_()
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):
@@ -263,14 +263,12 @@ class SvRegression:
 
         num_predictors = self.num_feat_selec
         predictors = self.ind_predictors_selected
+        assert ind_feat in self.ind_predictors_selected, "target_pred must be in predictors"
         feat = predictors[ind_feat]
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         # Commenting for now.
         # TODO: find a clever way to raise this error.
-        # if ind_feat not in self.ind_predictors_selected:
-        #     raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{ind_feat}\n""" + \
-        #                       """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
         npfactor = np.math.factorial
@@ -389,9 +387,7 @@ class SvRegression:
         -------
         None
         """
-        shaps = np.abs(self.shaps)
-        shaps = np.sort(shaps)
-        shaps = shaps[::-1]
+        shaps = np.sort(np.abs(self.shaps))[::-1]
         plt.figure(figsize=(10, 5))
         plt.bar(range(len(shaps)), shaps)
         plt.xlabel("Features")
@@ -399,12 +395,12 @@ class SvRegression:
         plt.title("Histogram of Shapley values")
         plt.show()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
     # Testing:
     DATASET = "data/mtcars.csv"
     df_dataset = pd.read_csv(DATASET, index_col="model")
-    
+
 
 
     sv_reg = SvRegression(data=df_dataset,

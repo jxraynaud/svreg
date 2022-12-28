@@ -4,48 +4,48 @@ from sv_regression.sv_regression import SvRegression
 
 
 def test_init():
-    dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto")
+    dataset = "data/mtcars.csv"
+    sv_reg = SvRegression(data=dataset, target="mpg")
     assert sv_reg.x_features.shape == (643, 27)
 
 
 def test_init_invalid():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     with pytest.raises(ValueError):
         _ = SvRegression(data=dataset, target="invalid_target")
 
 
 def test_normalize():
-    dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto")
+    dataset = "data/mtcars.csv"
+    sv_reg = SvRegression(data=dataset, target="mpg")
     x_features_norm, _ = sv_reg.normalize()
     assert x_features_norm.shape == (643, 27)
 
 
 def test_unnormalize():
-    dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto")
+    dataset = "data/mtcars.csv"
+    sv_reg = SvRegression(data=dataset, target="mpg")
     x_features_norm, y_target_norm = sv_reg.normalize()
     x_features, _ = sv_reg.unnormalize(x_features_norm, y_target_norm)
     assert x_features.shape == (643, 27)
 
 
 def test_get_rsquared():
-    dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto")
+    dataset = "data/mtcars.csv"
+    sv_reg = SvRegression(data=dataset, target="mpg")
     rsquared = sv_reg._get_rsquared_sk(sv_reg.num_feat_selec)
     assert round(rsquared, 3) == 0.885
 
 
 def test_get_rsquared_ind_0():
-    dataset = "data/base_test_sv_reg_working.csv"
-    sv_reg = SvRegression(data=dataset, target="qlead_auto")
+    dataset = "data/mtcars.csv"
+    sv_reg = SvRegression(data=dataset, target="mpg")
     rsquared = sv_reg._get_rsquared_sk(0)
     assert rsquared == 0
 
 
 def test_compute_shapley_incorrect_target():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
             data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2, 3, 4]
@@ -64,18 +64,18 @@ def test_compute_shapley_5_features(cache_compute_5_features):
 
 
 def test_compute_shapley_none():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
-            data=dataset, target="qlead_auto", ind_predictors_selected=[]
+            data=dataset, target="mpg", ind_predictors_selected=[]
         )
         _ = sv_reg.compute_shapley()
 
 
 def test_compute_shapley_incorrect():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     sv_reg = SvRegression(
-        data=dataset, target="qlead_auto", ind_predictors_selected=[0]
+        data=dataset, target="mpg", ind_predictors_selected=[0]
     )
     sv_reg._list_r_squared = None
     with pytest.raises(IndexError):
@@ -88,25 +88,25 @@ def test_check_norm_shap(cache_norm_shap):
 
 
 def test_data_sv():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     sv_reg = SvRegression(
-        data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2]
+        data=dataset, target="mpg", ind_predictors_selected=[0, 1, 2]
     )
     data = sv_reg.data_sv
     assert data.shape == (643, 28)
 
 
 def test_fit():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     sv_reg = SvRegression(
-        data=dataset, target="qlead_auto", ind_predictors_selected=[0, 1, 2]
+        data=dataset, target="mpg", ind_predictors_selected=[0, 1, 2]
     )
     sv_reg.fit()
     assert sv_reg.x_features.shape == (643, 3)
 
 
 def test_fit_incorrect_target():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
             data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2]
@@ -115,10 +115,10 @@ def test_fit_incorrect_target():
 
 
 def test_fit_incorrect_ind():
-    dataset = "data/base_test_sv_reg_working.csv"
+    dataset = "data/mtcars.csv"
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
-            data=dataset, target="qlead_auto", ind_predictors_selected=[]
+            data=dataset, target="mpg", ind_predictors_selected=[]
         )
         sv_reg.fit()
 

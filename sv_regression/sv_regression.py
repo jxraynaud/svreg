@@ -395,13 +395,11 @@ class SvRegression:
         plt.title("Histogram of Shapley values")
         plt.show()
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
     # Testing:
     DATASET = "data/mtcars.csv"
     df_dataset = pd.read_csv(DATASET, index_col="model")
-
-
 
     sv_reg = SvRegression(data=df_dataset,
                           ind_predictors_selected=list(range(10)),

@@ -13,17 +13,18 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from alive_progress import alive_bar
-from icecream import ic
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
+
 patch_sklearn()
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
 
 # from typing import Tuple
 
 __version__ = "0.0.1"
+
 
 class SvRegression:
     """This class performs linear regression using Shapley Values from game theory.
@@ -86,7 +87,6 @@ class SvRegression:
         self.coeffs_norm = np.zeros(self.num_feat_selec)
         # initializing Shapley values array (normalized basis).
         self.shaps = np.zeros(self.num_feat_selec)
-
 
     @property
     def data_sv(self):
@@ -189,7 +189,8 @@ class SvRegression:
             self.lin_reg.fit(x_features_curr, self.y_targets_norm)
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
             # Update the progress bar after each linear regression computation.
-            # bar_()
+            if bar_ is not None:
+                bar_()
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):
@@ -343,8 +344,8 @@ class SvRegression:
         stds_x = np.sqrt(self._scaler_x.var_)
         stds_y = np.sqrt(self._scaler_y.var_)
 
-        self.coeffs = (self.coeffs * stds_y)/ stds_x
-        offset = means_y - ((means_x * stds_y )/ stds_x).sum()
+        self.coeffs = (self.coeffs * stds_y) / stds_x
+        offset = means_y - ((means_x * stds_y) / stds_x).sum()
 
         self.coeffs = np.concatenate((offset, self.coeffs))
 
@@ -395,35 +396,37 @@ class SvRegression:
         plt.title("Histogram of Shapley values")
         plt.show()
 
+
 if __name__ == "__main__":
 
     # Testing:
     DATASET = "data/mtcars.csv"
     df_dataset = pd.read_csv(DATASET, index_col="model")
 
-    sv_reg = SvRegression(data=df_dataset,
-                          ind_predictors_selected=list(range(10)),
-                          #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
-                          #ind_predictors_selected=[0, 1, 2, 3, 4],
-                          #target="qlead_auto"
-                          target="mpg"
-                          )
+    sv_reg = SvRegression(
+        data=df_dataset,
+        ind_predictors_selected=list(range(10)),
+        # ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
+        # ind_predictors_selected=[0, 1, 2, 3, 4],
+        # target="qlead_auto"
+        target="mpg",
+    )
 
     # Fitting the regression.
     coeffs = sv_reg.fit()
 
-    print("="*70)
+    print("=" * 70)
     print("Per predictor Shapley value (normalized basis).")
     print(sv_reg.shaps)
-    print("="*70)
+    print("=" * 70)
     print("Coefficients of the SV regression (normalized basis).")
     print(sv_reg.coeffs_norm)
-    print("="*70)
+    print("=" * 70)
     print("Coefficients of the SV regression (unnormalized basis).")
     print("sv_reg.coeffs[0] --> intercept term.")
     print(sv_reg.coeffs)
-    print("="*70)
+    print("=" * 70)
     print("Checking that the Shapley Values sums up to the full model R^2.")
     print(sv_reg.check_norm_shap())
-    print("="*70)
-    #sv_reg.histo_shaps()
+    print("=" * 70)
+    # sv_reg.histo_shaps()

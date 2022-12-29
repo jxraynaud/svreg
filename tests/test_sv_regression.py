@@ -117,4 +117,3 @@ def test_fit_incorrect_ind(dataset):
             data=dataset, target="mpg", ind_predictors_selected=[]
         )
         sv_reg.fit()
-

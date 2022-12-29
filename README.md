@@ -33,6 +33,6 @@ pip install -i https://test.pypi.org/simple/ sv_regression
 from sv_regression import SvRegression
 ```
 
-### Changelog 
+### Changelog
 
 - 0.1.0: Initial release

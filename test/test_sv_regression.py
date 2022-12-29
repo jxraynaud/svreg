@@ -61,7 +61,7 @@ def test_compute_shapley_1_feature(dataset):
 
 def test_compute_shapley_5_features(cache_compute_5_features):
     shapley = cache_compute_5_features
-    assert round(shapley, 3) == 0.022
+    assert pytest.approx(shapley, 3) == 0.022
 
 
 def test_compute_shapley_none(dataset):
@@ -83,7 +83,8 @@ def test_compute_shapley_incorrect(dataset):
 
 def test_check_norm_shap(cache_norm_shap):
     test_dict = cache_norm_shap
-    assert test_dict["r_squared_full"] == test_dict["sum_shaps"]
+    assert pytest.approx(test_dict["r_squared_full"], 3)  == \
+           pytest.approx(test_dict["sum_shaps"], 3)
 
 
 def test_data_sv(dataset):

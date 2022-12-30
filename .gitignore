@@ -62,3 +62,6 @@ profile_stats/
 
 # Python venv
 .venv*/
+
+# coverage files
+.coverage

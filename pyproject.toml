@@ -1,2 +1,20 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "sv_regression"
+authors = [{name = "Yannick Stoll, Elidjah Maugalem", email = "yannick@pixelforest.io"}]
+readme = "README.md"
+dynamic = ["version", "description"]
+
 [tool.black]
-max-line-length = 150
+# max-line-length = 150
+line-length = 150
+
+[tool.pytest.ini_options]
+filterwarnings = [
+# Ignoring DeprecationWarning for now...
+    "ignore::DeprecationWarning"
+]
+#addopts = "-v -s"

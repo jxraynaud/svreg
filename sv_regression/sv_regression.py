@@ -13,14 +13,17 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from alive_progress import alive_bar
-from icecream import ic
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
+
 patch_sklearn()
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 # from typing import Tuple
+
+__version__ = "0.0.1"
 
 
 class SvRegression:
@@ -30,14 +33,15 @@ class SvRegression:
 
     def __init__(
         self,
-        data=None,
+        data=None,  # Must be a dataframe or an array (not a path to a file).
         ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
         target=None,
     ):
 
-        self._data_sv = pd.read_csv(data, index_col="date", parse_dates=True, infer_datetime_format=True)
+        self._data_sv = data
         # Check that target is indeed in the dataset.
-        assert target in self._data_sv.columns  # check that the target is in the dataset.
+        if target not in self._data_sv.columns:
+            raise ValueError(f"{target} not in the dataset.")
 
         # Todo: find a way more subtle to handle missing values.
         n_rows = self._data_sv.shape[0]
@@ -46,7 +50,7 @@ class SvRegression:
         n_rows_complete, n_cols = self._data_sv.shape
 
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
-        print(f"{n_rows_complete} rows in the dataset: {data}.")
+        print(f"{n_rows_complete} rows in the dataset.")
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
         # Initializing features and target.
@@ -83,7 +87,6 @@ class SvRegression:
         self.coeffs_norm = np.zeros(self.num_feat_selec)
         # initializing Shapley values array (normalized basis).
         self.shaps = np.zeros(self.num_feat_selec)
-
 
     @property
     def data_sv(self):
@@ -186,7 +189,8 @@ class SvRegression:
             self.lin_reg.fit(x_features_curr, self.y_targets_norm)
             r_squared = self.lin_reg.score(x_features_curr, self.y_targets_norm)
             # Update the progress bar after each linear regression computation.
-            bar_()
+            if bar_ is not None:
+                bar_()
             return r_squared
 
     def compute_usefullness(self, coalition, target=2):
@@ -260,14 +264,12 @@ class SvRegression:
 
         num_predictors = self.num_feat_selec
         predictors = self.ind_predictors_selected
+        assert ind_feat in self.ind_predictors_selected, "target_pred must be in predictors"
         feat = predictors[ind_feat]
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
         # Commenting for now.
         # TODO: find a clever way to raise this error.
-        # if ind_feat not in self.ind_predictors_selected:
-        #     raise ValueError(f"""\npredictors: \n{predictors}.\ntarget_pred:\n{ind_feat}\n""" + \
-        #                       """target_pred must be in predictors.""")
         # Initializing shapley value to 0.0.
         shapley_val = 0
         npfactor = np.math.factorial
@@ -342,8 +344,8 @@ class SvRegression:
         stds_x = np.sqrt(self._scaler_x.var_)
         stds_y = np.sqrt(self._scaler_y.var_)
 
-        self.coeffs = (self.coeffs * stds_y)/ stds_x
-        offset = means_y - ((means_x * stds_y )/ stds_x).sum()
+        self.coeffs = (self.coeffs * stds_y) / stds_x
+        offset = means_y - ((means_x * stds_y) / stds_x).sum()
 
         self.coeffs = np.concatenate((offset, self.coeffs))
 
@@ -379,42 +381,52 @@ class SvRegression:
             sum_shap = sum_shap + shap
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
+    def histo_shaps(self):
+        """Plot the histogram of the shapley values.
+
+        Returns
+        -------
+        None
+        """
+        shaps = np.sort(np.abs(self.shaps))[::-1]
+        plt.figure(figsize=(10, 5))
+        plt.bar(range(len(shaps)), shaps)
+        plt.xlabel("Features")
+        plt.ylabel("Shapley values")
+        plt.title("Histogram of Shapley values")
+        plt.show()
+
 
 if __name__ == "__main__":
 
     # Testing:
-    # Dataset path.
-    # Rmq: in the non-optimized codebase, computing all regressors over the 27 features
-    # should take approximately 24-26 hours.
-    DATASET = "data/base_test_sv_reg_working.csv"
+    DATASET = "data/mtcars.csv"
+    df_dataset = pd.read_csv(DATASET, index_col="model")
 
-    sv_reg = SvRegression(data=DATASET,
-                          ind_predictors_selected=list(range(5)),
-                          #ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
-                          #ind_predictors_selected=[0, 1, 2, 3, 4],
-                          target="qlead_auto")
+    sv_reg = SvRegression(
+        data=df_dataset,
+        ind_predictors_selected=list(range(10)),
+        # ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
+        # ind_predictors_selected=[0, 1, 2, 3, 4],
+        # target="qlead_auto"
+        target="mpg",
+    )
 
     # Fitting the regression.
     coeffs = sv_reg.fit()
 
-    # Per predictor Shapley value (normalized basis).
-    ic(sv_reg.shaps)
-    # Coefficients of the SV regression (normalized basis).
-    ic(sv_reg.coeffs_norm)
-    # Coefficients of the SV regression (unnormalized basis).
-    # sv_reg.coeffs[0] --> intercept term.
-    ic(sv_reg.coeffs)
-
-    # feat_norm, tar_norm = sv_reg.normalize()
-    # feat, tar = sv_reg.unnormalize(x_features_norm=feat_norm, y_features_norm=tar_norm)
-
-    # Test check_norm works !
-    # check_norm = sv_reg.check_norm_shap()
-    # ic(check_norm)
-
-    # Activate GPU acceleration.
-    # Problem: requires dpctl to work:
-    # https://pypi.org/project/dpctl/
-
-    # I had an issue installing dpctl, turning off for now.
-    # with config_context(target_offload="gpu:0"):
+    print("=" * 70)
+    print("Per predictor Shapley value (normalized basis).")
+    print(sv_reg.shaps)
+    print("=" * 70)
+    print("Coefficients of the SV regression (normalized basis).")
+    print(sv_reg.coeffs_norm)
+    print("=" * 70)
+    print("Coefficients of the SV regression (unnormalized basis).")
+    print("sv_reg.coeffs[0] --> intercept term.")
+    print(sv_reg.coeffs)
+    print("=" * 70)
+    print("Checking that the Shapley Values sums up to the full model R^2.")
+    print(sv_reg.check_norm_shap())
+    print("=" * 70)
+    # sv_reg.histo_shaps()

@@ -6,15 +6,27 @@
 image: python:3.10
 
 pipelines:
-  default:
-      - step:
-          name: Test
-          caches:
-            - pip
-          script:
-            - pip install -r requirements.txt
-            #- pytest -v tests/* --junitxml=test-reports/report.xml
-            - pytest -v --cov-report html --cov="." --cov-append
+    custom:
+        - step:
+            name: Test
+            caches:
+              - pip
+            script:
+              - pip install -r requirements.txt
+              - pytest -v --cov-report html --cov="." --cov-append
+    branches:
+      master:
+        - step:
+            name: Installing and running tox.
+            script:
+              - pip install -U tox
+              - pip --version
+              - tox --version
+              # Actually run tox.
+              - tox
+
+
+
       # - step:
       #     name: Lint code
       #     script:

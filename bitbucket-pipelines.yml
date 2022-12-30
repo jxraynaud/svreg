@@ -6,7 +6,7 @@
 image: python:3.10
 
 pipelines:
-  default:
+  custom:
     - parallel:
       - step:
           name: Test

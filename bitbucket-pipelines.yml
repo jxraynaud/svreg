@@ -6,14 +6,6 @@
 image: python:3.10
 
 pipelines:
-    custom:
-        - step:
-            name: Test
-            caches:
-              - pip
-            script:
-              - pip install -r requirements.txt
-              - pytest -v --cov-report html --cov="." --cov-append
     branches:
       master:
         - step:
@@ -24,12 +16,12 @@ pipelines:
               - tox --version
               # Actually run tox.
               - tox
-
-
-
-      # - step:
-      #     name: Lint code
-      #     script:
-      #       # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
-      #       - pip install flake8
-      #       - flake8 . --extend-exclude=dist,build --show-source --statistics
+      develop:
+        - step:
+            name: Test
+            trigger: manual
+            caches:
+              - pip
+            script:
+              - pip install -r requirements.txt
+              - pytest -v --cov-report html --cov="." --cov-append

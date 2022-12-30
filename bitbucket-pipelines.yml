@@ -19,7 +19,6 @@ pipelines:
       develop:
         - step:
             name: Test
-            trigger: manual
             caches:
               - pip
             script:

@@ -7,7 +7,6 @@ matplotlib
 numpy
 pandas
 pre-commit
-pre-commit
 pytest
 pytest-cov
 scikit-learn==1.0.1

@@ -67,3 +67,6 @@ profile_stats/
 # Python venv
 .venv*/
 .tool-versions
+
+# Datasets secrets
+*_secret.csv

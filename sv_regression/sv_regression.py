@@ -400,15 +400,12 @@ class SvRegression:
 if __name__ == "__main__":
 
     # Testing:
-    DATASET = "data/mtcars.csv"
+    DATASET = "../data/mtcars.csv"
     df_dataset = pd.read_csv(DATASET, index_col="model")
 
     sv_reg = SvRegression(
         data=df_dataset,
         ind_predictors_selected=list(range(10)),
-        # ind_predictors_selected=[3, 7, 8, 10, 15, 2, 5],
-        # ind_predictors_selected=[0, 1, 2, 3, 4],
-        # target="qlead_auto"
         target="mpg",
     )
 

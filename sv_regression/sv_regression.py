@@ -54,7 +54,8 @@ class SvRegression:
         print(f"{n_cols - 1} features (regressors) present in the dataset.")
 
         # Initializing features and target.
-        self.x_features = np.array(self._data_sv.drop(labels=target, axis=1))
+        self._data_without_target = self._data_sv.drop(labels=target, axis=1)
+        self.x_features = np.array(self._data_without_target)
         self.y_targets = np.array(self._data_sv[target].ravel())
         # compute the number of features, to be corrected if ind_predictors_selected is not None.
         self.num_feat_selec = self.x_features.shape[1]
@@ -66,7 +67,7 @@ class SvRegression:
             self.x_features = self.x_features[:, ind_predictors_selected]
             self.num_feat_selec = self.x_features.shape[1]
             print(f"{self.num_feat_selec} features selected.")
-
+        self.names = self._data_without_target.columns[self.ind_predictors_selected]
         # Scalers for features and target:
         self._scaler_x = StandardScaler()
         self._scaler_y = StandardScaler()
@@ -390,7 +391,7 @@ class SvRegression:
         """
         shaps = np.sort(np.abs(self.shaps))[::-1]
         plt.figure(figsize=(10, 5))
-        plt.bar(range(len(shaps)), shaps)
+        plt.bar(self.names, shaps)
         plt.xlabel("Features")
         plt.ylabel("Shapley values")
         plt.title("Histogram of Shapley values")
@@ -426,4 +427,3 @@ if __name__ == "__main__":
     print("Checking that the Shapley Values sums up to the full model R^2.")
     print(sv_reg.check_norm_shap())
     print("=" * 70)
-    # sv_reg.histo_shaps()

@@ -4,9 +4,16 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "sv_regression"
-authors = [{name = "Yannick Stoll, Elidjah Maugalem", email = "yannick@pixelforest.io"}]
+authors = [{name = "Yannick Stoll", email = "yannick@pixelforest.io"}]
 readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "LICENSE.MD"}
+keywords = ["regression", "shapley value", "game theory", "explainability"]
 dynamic = ["version", "description"]
+
+[project.urls]
+original_article = "https://www.researchgate.net/publication/229728883_Analysis_of_Regression_in_Game_Theory_Approach"
+Source = "https://bitbucket.org/pixelforest/sv_regression/src/master/"
 
 [tool.black]
 # max-line-length = 150

@@ -33,4 +33,4 @@ jobs:
         pip install -r requirements.txt
     - name: Run pytest
       run: |
-        pytest
+        pytest -v --cov-report html --cov="." --cov-append

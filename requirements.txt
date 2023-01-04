@@ -4,6 +4,7 @@ cython>=0.28.5
 dpcpp-cpp-rt
 icecream
 matplotlib
+seaborn
 numpy
 pandas
 pre-commit

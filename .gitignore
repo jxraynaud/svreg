@@ -83,5 +83,5 @@ profile_stats/
 .venv*/
 .tool-versions
 
-# Secret files
+# Datasets secrets
 *_secret.csv

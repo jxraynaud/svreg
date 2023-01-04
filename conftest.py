@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from sv_regression.sv_regression import SvRegression
+from svreg.svreg import SvRegression
 
 
 @pytest.fixture

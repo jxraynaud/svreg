@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from sv_regression.sv_regression import SvRegression
+from svreg.svreg import SvRegression
 
 
 def test_init(dataset):

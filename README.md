@@ -1,4 +1,4 @@
-# sv_regression : regression based on Shapley Values.
+# svreg : regression based on Shapley Values.
 
 ----
 

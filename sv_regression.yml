@@ -1,4 +1,4 @@
-name: sv_regression
+name: svreg
 channels:
   - pytorch
   - anaconda

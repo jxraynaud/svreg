@@ -8,7 +8,7 @@ For now, svreg is only available on Test Pypi.
 To install the package, please run the following command:
 
 ```bash
-pip install -i https://test.pypi.org/simple/sv_regression/
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple sv_regression
 ```
 
 ## Requirements

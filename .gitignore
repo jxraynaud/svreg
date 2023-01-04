@@ -82,3 +82,6 @@ profile_stats/
 # Python venv
 .venv*/
 .tool-versions
+
+# Secret files
+*_secret.csv

@@ -21,11 +21,6 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
-# from typing import Tuple
-
-__version__ = "0.0.1"
-
-
 class SvRegression:
     """This class performs linear regression using Shapley Values from game theory.
     Based on paper https://www.researchgate.net/publication/229728883_Analysis_of_Regression_in_Game_Theory_Approach

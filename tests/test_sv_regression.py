@@ -3,9 +3,7 @@ import numpy as np
 
 from svreg.svreg import SvRegression
 
-
 def test_init(dataset):
-    #dataset = "data/mtcars.csv"
     sv_reg = SvRegression(data=dataset, target="mpg")
     assert sv_reg.x_features.shape == (32, 10)
 
@@ -25,9 +23,11 @@ def test_normalize(dataset):
 def test_unnormalize(dataset):
     sv_reg = SvRegression(data=dataset, target="mpg")
     x_features_norm, y_target_norm = sv_reg.normalize()
-    x_features, _ = sv_reg.unnormalize(x_features_norm, y_target_norm)
-    assert x_features.shape == (32, 10)
-
+    x_features, y_target = sv_reg.unnormalize(x_features_norm, y_target_norm)
+    assert pytest.approx(np.amax(x_features), 0.002) == 472.0
+    assert pytest.approx(np.amin(x_features), 0.002) == 0.0
+    assert pytest.approx(np.amax(y_target), 0.002) == 33.9
+    assert pytest.approx(np.amin(y_target), 0.002) == 10.4
 
 def test_get_rsquared(dataset):
     sv_reg = SvRegression(data=dataset, target="mpg")
@@ -44,41 +44,22 @@ def test_get_rsquared_ind_0(dataset):
 def test_compute_shapley_incorrect_target(dataset):
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
-            data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2, 3, 4]
+            data=dataset, target="incorrect_t", regressors_selected=["mpg", "cyl", "disp"]
         )
         _ = sv_reg.compute_shapley(ind_feat=6)
 
 
-def test_compute_shapley_1_feature(dataset):
-    with pytest.raises(AssertionError):
-        sv_reg = SvRegression(
-            data=dataset,
-            target="mpg",
-            ind_predictors_selected=[0]
-        )
-        _ = sv_reg.compute_shapley()
-
-
-def test_compute_shapley_5_features(cache_compute_5_features):
-    shapley = cache_compute_5_features
+def test_compute_shapley_three_features(cache_compute_three_features):
+    shapley = cache_compute_three_features
     assert pytest.approx(shapley, 3) == 0.022
 
 
 def test_compute_shapley_none(dataset):
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         sv_reg = SvRegression(
-            data=dataset, target="mpg", ind_predictors_selected=[]
+            data=dataset, target="mpg", regressors_selected=["toto"]
         )
         _ = sv_reg.compute_shapley()
-
-
-def test_compute_shapley_incorrect(dataset):
-    sv_reg = SvRegression(
-        data=dataset, target="mpg", ind_predictors_selected=[0]
-    )
-    sv_reg._list_r_squared = None
-    with pytest.raises(Exception):
-        _ = sv_reg.compute_shapley(ind_feat=5)
 
 
 def test_check_norm_shap(cache_norm_shap):
@@ -87,17 +68,17 @@ def test_check_norm_shap(cache_norm_shap):
            pytest.approx(test_dict["sum_shaps"], 3)
 
 
-def test_data_sv(dataset):
+def test_data(dataset):
     sv_reg = SvRegression(
-        data=dataset, target="mpg", ind_predictors_selected=[0, 1, 2]
+        data=dataset, target="mpg", regressors_selected=["cyl", "disp", "drat"]
     )
-    data = sv_reg.data_sv
-    assert data.shape == (32, 11)
+    data = sv_reg.data
+    assert data.shape == (32, 3)
 
 
 def test_fit(dataset):
     sv_reg = SvRegression(
-        data=dataset, target="mpg", ind_predictors_selected=[0, 1, 2]
+        data=dataset, target="mpg", regressors_selected=["cyl", "disp", "drat"]
     )
     sv_reg.fit()
     assert sv_reg.x_features.shape == (32, 3)
@@ -106,14 +87,6 @@ def test_fit(dataset):
 def test_fit_incorrect_target(dataset):
     with pytest.raises(ValueError):
         sv_reg = SvRegression(
-            data=dataset, target="incorrect_t", ind_predictors_selected=[0, 1, 2]
-        )
-        sv_reg.fit()
-
-
-def test_fit_incorrect_ind(dataset):
-    with pytest.raises(ValueError):
-        sv_reg = SvRegression(
-            data=dataset, target="mpg", ind_predictors_selected=[]
+            data=dataset, target="incorrect_t", regressors_selected=["mpg", "cyl", "disp"]
         )
         sv_reg.fit()

@@ -23,7 +23,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 # for debug purposes:
-from icecream import ic
+# from icecream import ic
 
 
 class SvRegression:
@@ -385,7 +385,7 @@ class SvRegression:
             sum_shap = sum_shap + shap
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
-    def histo_shaps(self, out_file=None):
+    def histo_shaps(self, out_file=None): # pragma: no cover
         """Plot the histogram of the shapley values.
 
         Returns
@@ -402,7 +402,7 @@ class SvRegression:
             plt.savefig("results/" + out_file)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
 
     # Testing:
     DATASET = "data/mtcars.csv"

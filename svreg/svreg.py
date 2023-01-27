@@ -34,8 +34,7 @@ class SvRegression:
     def __init__(
         self,
         data=None,  # Must be a dataframe or an array (not a path to a file).
-        # ind_predictors_selected=None,  # predictors selected, must be a list of indices. If None, all are selected.
-        regressors_selected=None,
+        regressors_selected=None,  # list of regressors selected, if None, all are selected.
         target=None,
     ):
 
@@ -55,7 +54,9 @@ class SvRegression:
         self._data = self._data.drop(labels=target, axis=1)
         if regressors_selected is not None:
             self._data = self._data[list(regressors_selected)]
-            self._regressors_selected = regressors_selected
+
+        self.reg_selec = list(self._data.columns)
+        #print(f"Regressors selected: {self.reg_selec}")
 
         # Display some useful informations.
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
@@ -250,7 +251,7 @@ class SvRegression:
         ----------
         ind_feat : int
             index of the predictor of interest of the shapley value
-            to be computed, by default 2
+            to be computed, by default 2.
 
         Returns
         -------
@@ -322,10 +323,22 @@ class SvRegression:
             corr = pearsonr(curr_feat, target).statistic
             self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
 
+
         # Saving unnormalized coefficients:
         self.coeffs_norm = np.copy(self.coeffs)
         # Unnormalize coefficients of the Shapley Value regression.
         self._unnormalize_coeffs()
+
+        self.shaps = list(zip(self.reg_selec, self.shaps))
+        self.shaps.sort(key=lambda a: a[1])
+        self.coeffs_norm = list(zip(self.reg_selec, self.coeffs_norm))
+        self.coeffs_norm.sort(key=lambda a: a[1])
+
+        intercept = self.coeffs[0]
+        self.coeffs = np.delete(self.coeffs, 0)
+        self.coeffs = list(zip(self.reg_selec, self.coeffs))
+        self.coeffs.sort(key=lambda a: a[1])
+        self.coeffs.insert(0, ("intercept", intercept))
 
         return self.coeffs
 
@@ -337,7 +350,7 @@ class SvRegression:
 
         Returns
         -------
-        self.coeffs: numpy array of shape (self.num_feat_selec + 1,)
+        self.coeffs: list of tuples of shape (self.num_feat_selec + 1,)
             The first element of self.coeffs is the intercept term
             in the unnormalized basis.
             The remaining elements are the coefficients of regressions for each predictor.
@@ -392,9 +405,9 @@ class SvRegression:
         -------
         None
         """
-        shaps = np.sort(np.abs(self.shaps))[::-1]
+
         plt.figure(figsize=(10, 5))
-        plt.bar(self._data.columns, shaps)
+        plt.bar(*zip(*self.shaps))
         plt.xlabel("Features")
         plt.ylabel("Shapley values")
         plt.title("Histogram of Shapley values")

@@ -27,7 +27,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 class SvRegression:
-    """This class performs linear regression using Shapley Values from game theory.
+    """This class performs linear regression using Shapley Values of game theory.
     Based on paper https://www.researchgate.net/publication/229728883_Analysis_of_Regression_in_Game_Theory_Approach
     """
 
@@ -206,7 +206,7 @@ class SvRegression:
         coalition : list[int]
             list of indices of predictors in the current coalition.
         target : int, optional
-            index of the predictor whose usefullness if computed
+            index of the predictor whose usefullness is computed
             for the given coalition, by default 2.
 
         Returns
@@ -273,8 +273,6 @@ class SvRegression:
         feat = predictors[ind_feat]
         if self.list_r_squared is None:
             raise ValueError("list_r_squared cannot be None.")
-        # Commenting for now.
-        # TODO: find a clever way to raise this error.
         # Initializing shapley value to 0.0.
         shapley_val = 0
         npfactor = np.math.factorial
@@ -283,8 +281,7 @@ class SvRegression:
             sum_usefullness = 0
             # Trick to shift weigths correctly.
             # For 0 length coalition, we enforce weight = 0 and then,
-            # for the remaining terms we compute the weigths by shifting backward
-            # len_comb.
+            # for the remaining terms we compute the weigths by shifting backward len_comb.
             if len_comb == 0:
                 weight = 0
             else:
@@ -399,11 +396,12 @@ class SvRegression:
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
     def histo_shaps(self, out_file=None): # pragma: no cover
-        """Plot the histogram of the shapley values.
+        """Plot the histogram of Shapley values.
 
-        Returns
-        -------
-        None
+        Parameters
+        ----------
+        out_file : string, optional
+            If not None, name of the outputted histogram, saved under results/out_file, by default None.
         """
 
         plt.figure(figsize=(10, 5))
@@ -429,7 +427,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # # Fitting the regression.
     coeffs = sv_reg.fit()
-    sv_reg.histo_shaps(out_file="essai.jpg")
+    sv_reg.histo_shaps(out_file="mt_cars.jpg")
 
     print("=" * 70)
     print("Per predictor Shapley value (normalized basis).")

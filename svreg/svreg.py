@@ -407,6 +407,7 @@ class SvRegression:
         plt.figure(figsize=(10, 5))
         plt.bar(*zip(*self.shaps))
         plt.xlabel("Features")
+        plt.xticks(rotation=90)
         plt.ylabel("Shapley values")
         plt.title("Histogram of Shapley values")
         if out_file is not None:

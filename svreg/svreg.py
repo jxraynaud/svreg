@@ -405,7 +405,9 @@ class SvRegression:
         """
 
         plt.figure(figsize=(10, 5))
-        plt.bar(*zip(*self.shaps))
+        features_names = [feat[0] for feat in self.shaps]
+        shaps_values = [feat[1] for feat in self.shaps]
+        plt.bar(features_names[::-1], shaps_values[::-1])
         plt.xlabel("Features")
         plt.xticks(rotation=90)
         plt.ylabel("Shapley values")

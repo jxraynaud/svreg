@@ -85,3 +85,6 @@ profile_stats/
 
 # Datasets secrets
 *_secret.csv
+
+# Notebook using secret data
+*_secret.ipynb

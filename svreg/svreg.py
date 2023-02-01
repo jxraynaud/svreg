@@ -23,7 +23,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 # for debug purposes:
-# from icecream import ic
+from icecream import ic
 
 
 class SvRegression:
@@ -88,6 +88,8 @@ class SvRegression:
         self.coeffs_norm = np.zeros(self._data.shape[1])
         # initializing Shapley values array (normalized basis).
         self.shaps = np.zeros(self._data.shape[1])
+        # initializing y_pred_norm
+        self.y_pred_norm = np.zeros(self._data.shape[0])
 
         # TODO: provisoire
         self.num_feat_selec = self._data.shape[1]
@@ -339,6 +341,20 @@ class SvRegression:
 
         return self.coeffs
 
+    def pred(self):
+        """Compute the target predictions obtained
+        from regressions coefficients in the normalized basis.
+
+        Returns:
+            self.y_pred_norm: numpy array of shape (self._data.shape[0],)
+            Per-line prediction.
+        """
+
+        coeffs_norm = np.array([feat[1] for feat in self.coeffs_norm]).T
+        self.y_pred_norm = np.matmul( self.x_features_norm , coeffs_norm)
+        return self.y_pred_norm
+
+
     def _unnormalize_coeffs(self):
         """Unnormalize the coefficients of regressions
         for each selected predictors.
@@ -430,6 +446,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # # Fitting the regression.
     coeffs = sv_reg.fit()
+
     sv_reg.histo_shaps(out_file="mt_cars.jpg")
 
     print("=" * 70)

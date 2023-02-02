@@ -2,15 +2,15 @@ alive_progress
 black
 cython>=0.28.5
 icecream
+ipykernel
 matplotlib
 numpy
 pandas
 pre-commit
+pylint
 pytest
 pytest-cov
 scikit-learn==1.0.1
 scikit-learn-intelex>=2021.6.0
 scipy
 seaborn
-pylint
-ipykernel

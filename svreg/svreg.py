@@ -10,9 +10,9 @@ https://prof.bht-berlin.de/groemping/software/relaimpo/
 
 from itertools import combinations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from alive_progress import alive_bar
 from scipy.stats import pearsonr
 from sklearnex import patch_sklearn
@@ -23,7 +23,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 # for debug purposes:
-from icecream import ic
 
 
 class SvRegression:
@@ -56,7 +55,7 @@ class SvRegression:
             self._data = self._data[list(regressors_selected)]
 
         self.reg_selec = list(self._data.columns)
-        #print(f"Regressors selected: {self.reg_selec}")
+        # print(f"Regressors selected: {self.reg_selec}")
 
         # Display some useful informations.
         print(f"{n_rows - n_rows_complete} rows have been deleted due to missing values.")
@@ -219,7 +218,6 @@ class SvRegression:
 
         len_predictors = self.num_feat_selec
 
-
         if len(coalition) == 1:
             # Rsquared corresponding to length 1 predictors:
             bin_coalition = [1 if x in coalition else 0 for x in range(len_predictors)]
@@ -322,7 +320,6 @@ class SvRegression:
             corr = pearsonr(curr_feat, target).statistic
             self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
 
-
         # Saving unnormalized coefficients:
         self.coeffs_norm = np.copy(self.coeffs)
         # Unnormalize coefficients of the Shapley Value regression.
@@ -351,9 +348,8 @@ class SvRegression:
         """
 
         coeffs_norm = np.array([feat[1] for feat in self.coeffs_norm]).T
-        self.y_pred_norm = np.matmul( self.x_features_norm , coeffs_norm)
+        self.y_pred_norm = np.matmul(self.x_features_norm, coeffs_norm)
         return self.y_pred_norm
-
 
     def _unnormalize_coeffs(self):
         """Unnormalize the coefficients of regressions
@@ -411,7 +407,7 @@ class SvRegression:
             sum_shap = sum_shap + shap
         return {"r_squared_full": r_squared_full, "sum_shaps": sum_shap}
 
-    def histo_shaps(self, out_file=None): # pragma: no cover
+    def histo_shaps(self, out_file=None):  # pragma: no cover
         """Plot the histogram of Shapley values.
 
         Parameters

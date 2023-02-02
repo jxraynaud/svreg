@@ -88,3 +88,6 @@ profile_stats/
 
 # Notebook using secret data
 *_secret.ipynb
+
+# Pictures with secret data
+*_secret.png

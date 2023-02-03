@@ -320,20 +320,25 @@ class SvRegression:
             corr = pearsonr(curr_feat, target).statistic
             self.coeffs[ind_feat] = self.coeffs[ind_feat] / corr
 
+        # Jusqu'à la ligne 325, self.coeffs --> coeffs normalisés.
+        # On préserve une copie des coeffs normalisées dans self.coeffs_norm !
         # Saving unnormalized coefficients:
         self.coeffs_norm = np.copy(self.coeffs)
         # Unnormalize coefficients of the Shapley Value regression.
-        self._unnormalize_coeffs()
+        self._unnormalize_coeffs()  # dénormalise self.coeffs.
 
         self.shaps = list(zip(self.reg_selec, self.shaps))
-        self.shaps.sort(key=lambda a: a[1])
+        # self.shaps.sort(key=lambda a: a[1])
+
         self.coeffs_norm = list(zip(self.reg_selec, self.coeffs_norm))
-        self.coeffs_norm.sort(key=lambda a: a[1])
+
+        # self.coeffs_norm.sort(key=lambda a: a[1])
 
         intercept = self.coeffs[0]
         self.coeffs = np.delete(self.coeffs, 0)
         self.coeffs = list(zip(self.reg_selec, self.coeffs))
-        self.coeffs.sort(key=lambda a: a[1])
+
+        # self.coeffs.sort(key=lambda a: a[1])
         self.coeffs.insert(0, ("intercept", intercept))
 
         return self.coeffs

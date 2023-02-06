@@ -324,21 +324,16 @@ class SvRegression:
         # On préserve une copie des coeffs normalisées dans self.coeffs_norm !
         # Saving unnormalized coefficients:
         self.coeffs_norm = np.copy(self.coeffs)
+
         # Unnormalize coefficients of the Shapley Value regression.
         self._unnormalize_coeffs()  # dénormalise self.coeffs.
 
         self.shaps = list(zip(self.reg_selec, self.shaps))
-        # self.shaps.sort(key=lambda a: a[1])
-
         self.coeffs_norm = list(zip(self.reg_selec, self.coeffs_norm))
-
-        # self.coeffs_norm.sort(key=lambda a: a[1])
 
         intercept = self.coeffs[0]
         self.coeffs = np.delete(self.coeffs, 0)
         self.coeffs = list(zip(self.reg_selec, self.coeffs))
-
-        # self.coeffs.sort(key=lambda a: a[1])
         self.coeffs.insert(0, ("intercept", intercept))
 
         return self.coeffs
@@ -422,8 +417,12 @@ class SvRegression:
         """
 
         plt.figure(figsize=(10, 5))
-        features_names = [feat[0] for feat in self.shaps]
-        shaps_values = [feat[1] for feat in self.shaps]
+
+        sorted_shaps = list(self.shaps)
+        sorted_shaps.sort(key=lambda a: a[1])
+
+        features_names = [feat[0] for feat in sorted_shaps]
+        shaps_values = [feat[1] for feat in sorted_shaps]
         plt.bar(features_names[::-1], shaps_values[::-1])
         plt.xlabel("Features")
         plt.xticks(rotation=90)

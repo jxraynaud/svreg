@@ -1,12 +1,13 @@
 alive_progress
 black
 cython>=0.28.5
-dpcpp-cpp-rt
 icecream
+ipykernel
 matplotlib
 numpy
 pandas
 pre-commit
+pylint
 pytest
 pytest-cov
 scikit-learn==1.0.1

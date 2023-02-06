@@ -91,3 +91,6 @@ profile_stats/
 
 # Pictures with secret data
 *_secret.png
+
+# Pickle files
+results/pickles/
